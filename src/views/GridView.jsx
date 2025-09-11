@@ -33,6 +33,8 @@ const GridView = () => {
   const [textAlign, setTextAlign] = useState('left');
   const [showTextColorPicker, setShowTextColorPicker] = useState(false);
   const [showBackgroundColorPicker, setShowBackgroundColorPicker] = useState(false);
+  const [showAddColumnModal, setShowAddColumnModal] = useState(false);
+  const [newColumnType, setNewColumnType] = useState('text');
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [hiddenColumns, setHiddenColumns] = useState([]);
@@ -99,20 +101,38 @@ const GridView = () => {
     { color: 'bg-zinc-500', name: 'Zinc' }
   ];
 
-  const columnTypes = [
-    { value: 'text', label: 'Text/Number', icon: '📝' },
-    { value: 'dropdown', label: 'Dropdown list', icon: '📋' },
-    { value: 'date', label: 'Date', icon: '📅' },
-    { value: 'duration', label: 'Duration', icon: '⏱️' },
-    { value: 'contact', label: 'Contact list', icon: '👤' },
-    { value: 'checkbox', label: 'Checkbox', icon: '✓' },
-    { value: 'symbols', label: 'Symbols', icon: '🔗' },
-    { value: 'autonumber', label: 'Auto number', icon: '#' },
-    { value: 'createdby', label: 'Created by', icon: '👤' },
-    { value: 'createddate', label: 'Created date', icon: '📅' },
-    { value: 'modifiedby', label: 'Modified by', icon: '👤' },
-    { value: 'modifieddate', label: 'Modified date', icon: '📅' }
-  ];
+  const columnTypeCategories = {
+    recommended: [
+      { value: 'text', label: 'Text/number', icon: '📝' },
+      { value: 'dropdown', label: 'Dropdown list', icon: '☰' },
+      { value: 'date', label: 'Date', icon: '📅' },
+      { value: 'checkbox', label: 'Checkbox', icon: '☐' }
+    ],
+    basic: [
+      { value: 'text', label: 'Text/number', icon: '📝' },
+      { value: 'autonumber', label: 'Auto-number', icon: '#' }
+    ],
+    planning: [
+      { value: 'dropdown', label: 'Dropdown list', icon: '☰' },
+      { value: 'checkbox', label: 'Checkbox', icon: '☐' },
+      { value: 'status', label: 'Status', icon: '◐' },
+      { value: 'progress', label: 'Progress', icon: '📊' },
+      { value: 'trends', label: 'Trends', icon: '📈' },
+      { value: 'ratings', label: 'Ratings', icon: '⭐' }
+    ],
+    date: [
+      { value: 'date', label: 'Date', icon: '📅' },
+      { value: 'createddate', label: 'Created date', icon: '📅' },
+      { value: 'modifieddate', label: 'Modified date', icon: '📅' },
+      { value: 'duration', label: 'Duration', icon: '⏱️' }
+    ],
+    people: [
+      { value: 'contact', label: 'Contact list', icon: '👤' },
+      { value: 'createdby', label: 'Created by', icon: '👤' },
+      { value: 'modifiedby', label: 'Modified by', icon: '👤' },
+      { value: 'comment', label: 'Latest comment', icon: '💬' }
+    ]
+  };
 
   const renameColumn = (columnKey, newLabel) => {
     setAllColumns(prev => prev.map(col => 
@@ -199,6 +219,22 @@ const GridView = () => {
 
   const [columnOrder, setColumnOrder] = useState(allColumns.map(col => col.key));
   const [nextColumnId, setNextColumnId] = useState(allColumns.length + 1);
+
+  const addNewColumn = () => {
+    const newColumn = {
+      key: `column${nextColumnId}`,
+      label: `Column ${nextColumnId}`,
+      width: '150px',
+      type: newColumnType
+    };
+    
+    setAllColumns(prev => [...prev, newColumn]);
+    setColumnOrder(prev => [...prev, newColumn.key]);
+    setNextColumnId(prev => prev + 1);
+    setData(prev => prev.map(row => ({ ...row, [newColumn.key]: '' })));
+    setShowAddColumnModal(false);
+    setNewColumnType('text');
+  };
 
   const visibleColumns = columnOrder
     .map(key => allColumns.find(col => col.key === key))
@@ -994,6 +1030,17 @@ const GridView = () => {
                   />
                 </th>
               ))}
+              <th className="p-2 border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 w-32">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowAddColumnModal(true)}
+                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 w-full justify-center"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-xs">Column</span>
+                </Button>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -1052,7 +1099,7 @@ const GridView = () => {
                       setTextColor(currentStyle.color || '#000000');
                       setTextAlign(currentStyle.textAlign || 'left');
                       
-                      if (column.type === 'text') {
+                      if (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment') {
                         setEditingCell(cellKey);
                       } else if (column.type === 'dropdown') {
                         setHoveredCell(cellKey);
@@ -1112,17 +1159,43 @@ const GridView = () => {
                               )}
                             </div>
                           )
-                        ) : column.type === 'contact' ? (
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${getAssigneeColor(row[column.key])}`}>
-                              {getAssigneeInitials(row[column.key])}
-                            </div>
-                            <span>{row[column.key]}</span>
+                        ) : column.type === 'checkbox' ? (
+                          <div className="flex justify-center">
+                            <input
+                              type="checkbox"
+                              checked={row[column.key] === 'true' || row[column.key] === true}
+                              onChange={(e) => handleCellEdit(row.id, column.key, e.target.checked.toString())}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
                           </div>
+                        ) : column.type === 'date' ? (
+                          <input
+                            type="date"
+                            value={row[column.key] || ''}
+                            onChange={(e) => handleCellEdit(row.id, column.key, e.target.value)}
+                            className="w-full px-2 py-1 border-0 bg-transparent text-sm focus:outline-none"
+                          />
+                        ) : column.type === 'contact' ? (
+                          row[column.key] ? (
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${getAssigneeColor(row[column.key])}`}>
+                                {getAssigneeInitials(row[column.key])}
+                              </div>
+                              <span>{row[column.key]}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">Unassigned</span>
+                          )
                         ) : column.type === 'condition' ? (
                           <div className="flex justify-center">
                             <div className={`w-4 h-4 rounded-full ${getConditionColor(row[column.key])}`}></div>
                           </div>
+                        ) : column.type === 'autonumber' ? (
+                          <span className="text-gray-600">#{row.id}</span>
+                        ) : column.type === 'status' ? (
+                          <span className={`px-2 py-1 rounded text-xs ${getStatusColor(row[column.key])}`}>
+                            {row[column.key] || 'Not Started'}
+                          </span>
                         ) : column.key === 'taskName' ? (
                           <div className="flex items-center">
                             {getRowIndent(row.id) > 0 && (
@@ -1221,6 +1294,43 @@ const GridView = () => {
         </div>
       </Modal>
 
+      <Modal isOpen={showAddColumnModal} onClose={() => setShowAddColumnModal(false)} title="Add Column" size="lg">
+        <div className="space-y-4 sm:space-y-6 max-h-96 overflow-y-auto">
+          {Object.entries(columnTypeCategories).map(([category, types]) => (
+            <div key={category}>
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 sm:mb-3">
+                {category === 'planning' ? 'Planning/Status' : category.charAt(0).toUpperCase() + category.slice(1)}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {types.map((type) => (
+                  <button
+                    key={type.value}
+                    onClick={() => {
+                      const newColumn = {
+                        key: `column${nextColumnId}`,
+                        label: `Column ${nextColumnId}`,
+                        width: '150px',
+                        type: type.value
+                      };
+                      
+                      setAllColumns(prev => [...prev, newColumn]);
+                      setColumnOrder(prev => [...prev, newColumn.key]);
+                      setNextColumnId(prev => prev + 1);
+                      setData(prev => prev.map(row => ({ ...row, [newColumn.key]: '' })));
+                      setShowAddColumnModal(false);
+                    }}
+                    className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors w-full"
+                  >
+                    <span className="text-base sm:text-lg flex-shrink-0">{type.icon}</span>
+                    <span className="text-xs sm:text-sm text-gray-900 dark:text-white truncate">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
       <Modal isOpen={showColumnPropertiesModal} onClose={() => setShowColumnPropertiesModal(false)} title={editingColumnKey && allColumns.find(col => col.key === editingColumnKey)?.label} size="xl">
         {editingColumnKey && (() => {
           const column = allColumns.find(col => col.key === editingColumnKey);
@@ -1252,7 +1362,7 @@ const GridView = () => {
                     onChange={(e) => changeColumnType(editingColumnKey, e.target.value)}
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none text-sm sm:text-base"
                   >
-                    {columnTypes.map((type) => (
+                    {Object.values(columnTypeCategories).flat().map((type) => (
                       <option key={type.value} value={type.value}>
                         {type.label}
                       </option>
