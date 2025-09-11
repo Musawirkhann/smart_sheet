@@ -55,6 +55,8 @@ const GridView = () => {
 
   const getHexColor = (bgClass) => {
     const colorMap = {
+      'bg-black': '#000000',
+      'bg-white': '#ffffff',
       'bg-gray-500': '#6b7280',
       'bg-red-500': '#ef4444',
       'bg-orange-500': '#f97316',
@@ -80,6 +82,8 @@ const GridView = () => {
 
   const colorOptions = [
     { color: 'bg-transparent border-2 border-gray-400', name: 'No Color', isTransparent: true },
+    { color: 'bg-black', name: 'Black' },
+    { color: 'bg-white', name: 'Pure White' },
     { color: 'bg-gray-500', name: 'Gray' },
     { color: 'bg-red-500', name: 'Red' },
     { color: 'bg-orange-500', name: 'Orange' },
@@ -820,7 +824,7 @@ const GridView = () => {
                       key={color.color}
                       className={`w-7 h-7 rounded cursor-pointer border-2 border-gray-200 hover:border-gray-400 ${color.color}`}
                       onClick={() => {
-                        const hexColor = getHexColor(color.color);
+                        const hexColor = color.color.includes('bg-white') ? '#ffffff' : getHexColor(color.color);
                         setTextColor(hexColor);
                         applyFormatting({ color: hexColor });
                         setShowTextColorPicker(false);
