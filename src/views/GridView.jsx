@@ -171,6 +171,12 @@ const GridView = () => {
   const [showColumnPropertiesModal, setShowColumnPropertiesModal] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [editingColumnKey, setEditingColumnKey] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartCell, setDragStartCell] = useState(null);
+  const [dragEndCell, setDragEndCell] = useState(null);
+  const [isFillDragging, setIsFillDragging] = useState(false);
+  const [copiedData, setCopiedData] = useState(null);
+  const [selectedRange, setSelectedRange] = useState(null);
   const [collapsedRows, setCollapsedRows] = useState(new Set());
   const [parentChildMap, setParentChildMap] = useState({});
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -491,6 +497,85 @@ const GridView = () => {
     };
   }, [rowData, cellStyles, allColumns]);
 
+  const copySelection = () => {
+    if (!selectedRange) return;
+    
+    const { startRow, endRow, startCol, endCol } = selectedRange;
+    const data = [];
+    
+    for (let r = startRow; r <= endRow; r++) {
+      const rowValues = [];
+      for (let c = startCol; c <= endCol; c++) {
+        const colKey = visibleColumns[c]?.key;
+        const cellValue = rowData[r]?.[colKey] || '';
+        rowValues.push(cellValue);
+      }
+      data.push(rowValues);
+    }
+    
+    setCopiedData({ data, isCut: false });
+    
+    // Copy to clipboard as tab-separated values
+    const textData = data.map(row => row.join('\t')).join('\n');
+    navigator.clipboard.writeText(textData);
+  };
+
+  const cutSelection = () => {
+    if (!selectedRange) return;
+    
+    copySelection();
+    setCopiedData(prev => prev ? { ...prev, isCut: true } : null);
+    
+    // Clear the cut cells
+    const { startRow, endRow, startCol, endCol } = selectedRange;
+    const newRowData = { ...rowData };
+    
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const colKey = visibleColumns[c]?.key;
+        if (colKey && newRowData[r]) {
+          newRowData[r] = { ...newRowData[r], [colKey]: '' };
+        }
+      }
+    }
+    
+    setRowData(newRowData);
+  };
+
+  const pasteSelection = () => {
+    if (!copiedData || !selectedCell) return;
+    
+    const [startRowStr, startColKey] = selectedCell.split('-');
+    const startRow = parseInt(startRowStr);
+    const startColIndex = visibleColumns.findIndex(col => col.key === startColKey);
+    
+    if (startColIndex === -1) return;
+    
+    const newRowData = { ...rowData };
+    
+    copiedData.data.forEach((rowValues, rowOffset) => {
+      const targetRow = startRow + rowOffset;
+      rowValues.forEach((value, colOffset) => {
+        const targetColIndex = startColIndex + colOffset;
+        const targetColKey = visibleColumns[targetColIndex]?.key;
+        
+        if (targetColKey && targetRow <= totalRows) {
+          if (!newRowData[targetRow]) {
+            newRowData[targetRow] = {};
+          }
+          newRowData[targetRow] = { ...newRowData[targetRow], [targetColKey]: value };
+        }
+      });
+    });
+    
+    setRowData(newRowData);
+    
+    // Clear copied data if it was cut
+    if (copiedData.isCut) {
+      setCopiedData(null);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey || e.metaKey) {
@@ -500,6 +585,15 @@ const GridView = () => {
         } else if ((e.key === 'y') || (e.key === 'z' && e.shiftKey)) {
           e.preventDefault();
           redo();
+        } else if (e.key === 'c') {
+          e.preventDefault();
+          copySelection();
+        } else if (e.key === 'x') {
+          e.preventDefault();
+          cutSelection();
+        } else if (e.key === 'v') {
+          e.preventDefault();
+          pasteSelection();
         }
       } else if (selectedCell && !editingCell) {
         const [rowNum, colKey] = selectedCell.split('-');
@@ -679,10 +773,10 @@ const GridView = () => {
   const indentRow = (rowNumber) => {
     // Find the previous visible row to make it the parent
     for (let i = rowNumber - 1; i >= 1; i--) {
-      if (rowData[i] && rowData[i].taskId) {
+      if (isRowVisible(i)) {
         setParentChildMap(prev => ({
           ...prev,
-          [rowNumber]: rowData[i].taskId
+          [rowNumber]: i
         }));
         
         setRowIndents(prev => ({
@@ -716,31 +810,27 @@ const GridView = () => {
     return Object.keys(rowData).filter(rowNum => parentChildMap[rowNum] === parentTaskId);
   };
 
-  const hasChildren = (taskId) => {
-    return Object.values(parentChildMap).includes(taskId);
+  const hasChildren = (rowNumber) => {
+    return Object.values(parentChildMap).includes(rowNumber);
   };
 
-  const toggleRowCollapse = (taskId) => {
+  const toggleRowCollapse = (rowNumber) => {
     setCollapsedRows(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(taskId)) {
-        newSet.delete(taskId);
+      if (newSet.has(rowNumber)) {
+        newSet.delete(rowNumber);
       } else {
-        newSet.add(taskId);
+        newSet.add(rowNumber);
       }
       return newSet;
     });
   };
 
   const isRowVisible = (rowNumber) => {
-    const parentTaskId = parentChildMap[rowNumber];
-    if (!parentTaskId) return true;
-    
-    if (collapsedRows.has(parentTaskId)) return false;
-    
-    // Find parent row number
-    const parentRowNum = Object.keys(rowData).find(num => rowData[num]?.taskId === parentTaskId);
+    const parentRowNum = parentChildMap[rowNumber];
     if (!parentRowNum) return true;
+    
+    if (collapsedRows.has(parentRowNum)) return false;
     
     return isRowVisible(parentRowNum);
   };
@@ -770,8 +860,8 @@ const GridView = () => {
   };
 
   const collapseAll = () => {
-    const parentTaskIds = [...new Set(Object.values(parentChildMap))];
-    setCollapsedRows(new Set(parentTaskIds));
+    const parentRowNums = [...new Set(Object.values(parentChildMap))];
+    setCollapsedRows(new Set(parentRowNums));
   };
 
   const handleIndent = () => {
@@ -944,6 +1034,51 @@ const GridView = () => {
     return cellStyles[cellKey] || {};
   };
 
+  const isInDragSelection = (rowNumber, columnKey) => {
+    if (!isDragging || !dragStartCell || !dragEndCell) return false;
+    
+    const [startRow, startCol] = dragStartCell.split('-');
+    const [endRow, endCol] = dragEndCell.split('-');
+    const startRowNum = parseInt(startRow);
+    const endRowNum = parseInt(endRow);
+    const startColIndex = visibleColumns.findIndex(col => col.key === startCol);
+    const endColIndex = visibleColumns.findIndex(col => col.key === endCol);
+    const currentColIndex = visibleColumns.findIndex(col => col.key === columnKey);
+    
+    const minRow = Math.min(startRowNum, endRowNum);
+    const maxRow = Math.max(startRowNum, endRowNum);
+    const minCol = Math.min(startColIndex, endColIndex);
+    const maxCol = Math.max(startColIndex, endColIndex);
+    
+    return rowNumber >= minRow && rowNumber <= maxRow && 
+           currentColIndex >= minCol && currentColIndex <= maxCol;
+  };
+
+  const getDragSelectionBorder = (rowNumber, columnKey) => {
+    if (!isInDragSelection(rowNumber, columnKey)) return '';
+    
+    const [startRow, startCol] = dragStartCell.split('-');
+    const [endRow, endCol] = dragEndCell.split('-');
+    const startRowNum = parseInt(startRow);
+    const endRowNum = parseInt(endRow);
+    const startColIndex = visibleColumns.findIndex(col => col.key === startCol);
+    const endColIndex = visibleColumns.findIndex(col => col.key === endCol);
+    const currentColIndex = visibleColumns.findIndex(col => col.key === columnKey);
+    
+    const minRow = Math.min(startRowNum, endRowNum);
+    const maxRow = Math.max(startRowNum, endRowNum);
+    const minCol = Math.min(startColIndex, endColIndex);
+    const maxCol = Math.max(startColIndex, endColIndex);
+    
+    let borders = [];
+    if (rowNumber === minRow) borders.push('border-t-2 border-t-blue-500');
+    if (rowNumber === maxRow) borders.push('border-b-2 border-b-blue-500');
+    if (currentColIndex === minCol) borders.push('border-l-2 border-l-blue-500');
+    if (currentColIndex === maxCol) borders.push('border-r-2 border-r-blue-500');
+    
+    return borders.join(' ');
+  };
+
   // eslint-disable-next-line no-unused-vars
   const handleRowSelect = (rowId) => {
     setSelectedRows(prev => 
@@ -1001,9 +1136,9 @@ const GridView = () => {
   };
 
   const contextMenuItems = [
-    { label: 'Cut', icon: Scissors, shortcut: '⌘ + X', onClick: () => {} },
-    { label: 'Copy', icon: Copy, shortcut: '⌘ + C', onClick: () => {} },
-    { label: 'Paste', icon: Clipboard, shortcut: '⌘ + V', onClick: () => {} },
+    { label: 'Cut', icon: Scissors, shortcut: '⌘ + X', onClick: () => cutSelection() },
+    { label: 'Copy', icon: Copy, shortcut: '⌘ + C', onClick: () => copySelection() },
+    { label: 'Paste', icon: Clipboard, shortcut: '⌘ + V', onClick: () => pasteSelection() },
     { type: 'separator' },
     { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
     { label: 'Edit details', icon: Edit, shortcut: '⌘ + E', onClick: () => {} },
@@ -1398,7 +1533,7 @@ const GridView = () => {
       )}
 
       {/* Table */}
-      <div className="flex rounded-lg overflow-hidden">
+      <div className="flex rounded-lg overflow-hidden select-none">
         {/* Fixed Row Number Column */}
         <div className="flex-shrink-0 rounded-l-lg overflow-hidden">
           <table className="border-collapse">
@@ -1600,6 +1735,16 @@ const GridView = () => {
                       key={`${row.rowNumber}-${column.key}`}
                       className={`px-3 py-1 border-b border-gray-200 ${
                         selectedCell === `${row.rowNumber}-${column.key}` ? 'outline outline-3 outline-blue-500 outline-offset-[-2px] bg-white rounded-md' : 
+                        (isInDragSelection(row.rowNumber, column.key) || (selectedRange && row.rowNumber >= selectedRange.startRow && row.rowNumber <= selectedRange.endRow && visibleColumns.findIndex(col => col.key === column.key) >= selectedRange.startCol && visibleColumns.findIndex(col => col.key === column.key) <= selectedRange.endCol)) ? `bg-blue-100 ${getDragSelectionBorder(row.rowNumber, column.key) || (() => {
+                          if (!selectedRange) return '';
+                          const colIndex = visibleColumns.findIndex(col => col.key === column.key);
+                          let borders = [];
+                          if (row.rowNumber === selectedRange.startRow) borders.push('border-t-2 border-t-blue-500');
+                          if (row.rowNumber === selectedRange.endRow) borders.push('border-b-2 border-b-blue-500');
+                          if (colIndex === selectedRange.startCol) borders.push('border-l-2 border-l-blue-500');
+                          if (colIndex === selectedRange.endCol) borders.push('border-r-2 border-r-blue-500');
+                          return borders.join(' ');
+                        })()}` :
                         selectedColumn === column.key ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
                       } ${
                         frozenColumns.includes(column.key) ? 'sticky z-10 bg-white shadow-md' : ''
@@ -1612,15 +1757,15 @@ const GridView = () => {
                         ...getCellStyle(row.rowNumber, column.key) 
                       }}
                       onMouseEnter={() => {
+                        if (isDragging) {
+                          const cellKey = `${row.rowNumber}-${column.key}`;
+                          setDragEndCell(cellKey);
+                        }
                         if (column.type === 'dropdown' || column.type === 'status') {
                           setHoveredCell(`${row.rowNumber}-${column.key}`);
                         }
                       }}
-                      onMouseLeave={() => {
-                        if (column.type === 'dropdown' || column.type === 'status') {
-                          setHoveredCell(null);
-                        }
-                      }}
+
                       onClick={() => {
                         const cellKey = `${row.rowNumber}-${column.key}`;
                         setSelectedCell(cellKey);
@@ -1640,6 +1785,59 @@ const GridView = () => {
                         // Only show dropdown/status on single click
                         if (column.type === 'dropdown' || column.type === 'status') {
                           setHoveredCell(cellKey);
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        const cellKey = `${row.rowNumber}-${column.key}`;
+                        if (!e.target.closest('.fill-handle')) {
+                          // Regular cell selection
+                          setDragStartCell(cellKey);
+                          setDragEndCell(cellKey);
+                          setIsDragging(true);
+                          setIsFillDragging(false);
+                        }
+                      }}
+                      // eslint-disable-next-line no-unused-vars
+                      onMouseUp={(e) => {
+                        if (isDragging && dragStartCell && dragEndCell) {
+                          const [startRow, startCol] = dragStartCell.split('-');
+                          const [endRow, endCol] = dragEndCell.split('-');
+                          const startRowNum = parseInt(startRow);
+                          const endRowNum = parseInt(endRow);
+                          const startColIndex = visibleColumns.findIndex(col => col.key === startCol);
+                          const endColIndex = visibleColumns.findIndex(col => col.key === endCol);
+                          
+                          const minRow = Math.min(startRowNum, endRowNum);
+                          const maxRow = Math.max(startRowNum, endRowNum);
+                          const minCol = Math.min(startColIndex, endColIndex);
+                          const maxCol = Math.max(startColIndex, endColIndex);
+                          
+                          // Set selected range for copy/paste operations
+                          setSelectedRange({
+                            startRow: minRow,
+                            endRow: maxRow,
+                            startCol: minCol,
+                            endCol: maxCol
+                          });
+                          
+                          // Only perform fill operation when dragging from fill handle
+                          if (isFillDragging && (startRowNum !== endRowNum || startColIndex !== endColIndex)) {
+                            const sourceValue = rowData[startRowNum]?.[startCol] || '';
+                            const newRowData = { ...rowData };
+                            for (let r = minRow; r <= maxRow; r++) {
+                              for (let c = minCol; c <= maxCol; c++) {
+                                const colKey = visibleColumns[c]?.key;
+                                if (colKey && (r !== startRowNum || colKey !== startCol)) {
+                                  if (!newRowData[r]) newRowData[r] = {};
+                                  newRowData[r][colKey] = sourceValue;
+                                }
+                              }
+                            }
+                            setRowData(newRowData);
+                          }
+                          
+                          setIsDragging(false);
+                          setIsFillDragging(false);
                         }
                       }}
                       onDoubleClick={() => {
@@ -1696,7 +1894,7 @@ const GridView = () => {
                           />
                         </div>
                       ) : (
-                        <div className="text-sm" style={getCellStyle(row.rowNumber, column.key)}>
+                        <div className="text-sm relative" style={getCellStyle(row.rowNumber, column.key)}>
                           {row.isEmpty ? (
                             <span className="text-sm text-gray-400"></span>
                           ) : column.type === 'dropdown' ? (
@@ -1816,17 +2014,17 @@ const GridView = () => {
                                 );
                               })()}
                               <div className="flex items-center">
-                                {!row.isEmpty && hasChildren(row.taskId) ? (
+                                {hasChildren(row.rowNumber) ? (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      toggleRowCollapse(row.taskId);
+                                      toggleRowCollapse(row.rowNumber);
                                     }}
                                     className="w-4 h-4 flex items-center justify-center mr-1 bg-gray-50 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-sm transition-colors border border-gray-200 dark:border-gray-600"
                                   >
                                     <svg 
                                       className={`w-3.5 h-3.5 text-gray-700 font-bold transition-transform ${
-                                        collapsedRows.has(row.taskId) ? '' : 'rotate-90'
+                                        collapsedRows.has(row.rowNumber) ? '' : 'rotate-90'
                                       }`} 
                                       fill="currentColor" 
                                       viewBox="0 0 20 20"
@@ -1838,13 +2036,28 @@ const GridView = () => {
                                 ) : (
                                   <div className="w-4 mr-1" />
                                 )}
-                                <span className="text-sm">{row.isEmpty ? '' : (row[column.key] || '')}</span>
+                                <span className="text-sm">{row[column.key] || ''}</span>
                               </div>
                             </div>
                           ) : column.key === 'taskName' ? (
                             <span>{row[column.key]}</span>
                           ) : (
                             <span>{row[column.key]}</span>
+                          )}
+                          {selectedCell === `${row.rowNumber}-${column.key}` && (
+                            <div 
+                              className="fill-handle absolute -bottom-1 -right-1 w-2 h-2 bg-blue-500 cursor-crosshair z-30 rounded-sm border border-blue-600"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const cellKey = `${row.rowNumber}-${column.key}`;
+                                setIsDragging(true);
+                                setIsFillDragging(true);
+                                setDragStartCell(cellKey);
+                                setDragEndCell(cellKey);
+                              }}
+                            >
+                            </div>
                           )}
                         </div>
                       )}
@@ -2186,7 +2399,7 @@ const GridView = () => {
 
       {showAddColumnModal && (
         <div 
-          className="fixed bg-white border-2 border-blue-500 rounded-lg shadow-xl z-[9999] w-80 max-h-[80vh] flex flex-col"
+          className="fixed bg-white border-2 border-blue-500 rounded-lg shadow-xl z-[9999] w-80 max-h-[500px] flex flex-col"
           style={{ 
             left: addColumnPosition.x, 
             top: addColumnPosition.y 
@@ -2394,7 +2607,7 @@ const GridView = () => {
             </div>
           </div>
           
-          <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg">
+          <div className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg">
             <div className="flex justify-end space-x-3">
               <Button 
                 variant="ghost" 
