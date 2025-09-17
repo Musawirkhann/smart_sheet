@@ -1,22 +1,128 @@
 import { useState, useRef, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { ChevronDown, Filter, Search, Plus, MoreHorizontal, Star, Copy, Trash2, Edit, ArrowUp, ArrowDown, Settings, Download, Share2, Scissors, Clipboard, FileText, RotateCcw, Undo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, DollarSign, Percent, Hash, Quote, Lock, HelpCircle, Cloud, Minus, MessageCircle, Paperclip, Eye, EyeOff, GripVertical, Palette, Indent, Outdent } from 'lucide-react';
+import { ChevronDown, Filter, Search, Plus, MoreHorizontal, Star, Copy, Trash2, Edit, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings, Download, Share2, Scissors, Clipboard, FileText, RotateCcw, Undo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, DollarSign, Percent, Hash, Quote, Lock, HelpCircle, Cloud, Minus, MessageCircle, Paperclip, Eye, EyeOff, GripVertical, Palette, Indent, Outdent, Calendar, Link, CornerDownRight, CornerUpLeft, MoreVertical, MoreVerticalIcon } from 'lucide-react';
+import DatePicker from 'react-date-picker';
+import 'react-date-picker/dist/DatePicker.css';
+import 'react-calendar/dist/Calendar.css';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
-import Dropdown from '../components/Dropdown';
-import ContextMenu from '../components/ContextMenu';
-import ColorPicker from '../components/ColorPicker';
+
 
 const GridView = () => {
-  const [data, setData] = useState([
-    { id: 1, taskId: '1', taskName: 'Project Kickoff', dependencies: 'None', assignedTo: 'Emily Davis', condition: 'green', startDate: '09/03/24' },
-    { id: 2, taskId: '2', taskName: 'Design Phase', dependencies: '1', assignedTo: 'John Doe', condition: 'red', startDate: '09/10/24' },
-    { id: 3, taskId: '3', taskName: 'Development', dependencies: '2', assignedTo: 'Mike Johnson', condition: 'yellow', startDate: '09/17/24' },
-    { id: 4, taskId: '4', taskName: 'Testing Phase', dependencies: '3', assignedTo: 'Chris Lee', condition: 'yellow', startDate: '10/01/24' },
-    { id: 5, taskId: '5', taskName: 'Deployment', dependencies: '4', assignedTo: 'Chris Lee', condition: 'red', startDate: '10/15/24' },
-  ]);
+  // Custom styles for react-date-picker
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-date-picker {
+        width: 100% !important;
+      }
+      .custom-date-picker .react-date-picker__wrapper {
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+        background: white !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
+      }
+      .custom-date-picker .react-date-picker__wrapper:focus-within {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+      }
+      .custom-date-picker .react-date-picker__inputGroup {
+        font-size: 14px !important;
+      }
+      .custom-date-picker .react-date-picker__inputGroup__input {
+        border: none !important;
+        outline: none !important;
+        font-size: 14px !important;
+        color: #374151 !important;
+      }
+      .custom-date-picker .react-date-picker__button {
+        border: none !important;
+        background: transparent !important;
+        padding: 2px !important;
+      }
+      .custom-calendar.react-calendar {
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+        font-family: Inter, system-ui, sans-serif !important;
+        background: white !important;
+        padding: 12px !important;
+        z-index: 9999 !important;
+        position: relative !important;
+      }
+      .react-date-picker__calendar {
+        z-index: 9999 !important;
+      }
+      .react-date-picker__calendar--open {
+        z-index: 9999 !important;
+      }
+      .custom-calendar .react-calendar__navigation {
+        margin-bottom: 12px !important;
+      }
+      .custom-calendar .react-calendar__navigation button {
+        background: transparent !important;
+        border: none !important;
+        color: #374151 !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        padding: 8px !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+      }
+      .custom-calendar .react-calendar__navigation button:hover {
+        background: #f3f4f6 !important;
+        color: #111827 !important;
+      }
+      .custom-calendar .react-calendar__month-view__weekdays {
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        color: #6b7280 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+      }
+      .custom-calendar .react-calendar__tile {
+        background: transparent !important;
+        border: none !important;
+        color: #374151 !important;
+        font-size: 14px !important;
+        padding: 8px !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+        margin: 1px !important;
+      }
+      .custom-calendar .react-calendar__tile:hover {
+        background: #f3f4f6 !important;
+        color: #111827 !important;
+      }
+      .custom-calendar .react-calendar__tile--active {
+        background: #3b82f6 !important;
+        color: white !important;
+      }
+      .custom-calendar .react-calendar__tile--now {
+        background: #dbeafe !important;
+        color: #1d4ed8 !important;
+        font-weight: 500 !important;
+      }
+      .custom-calendar .react-calendar__tile--neighboringMonth {
+        color: #9ca3af !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+  const [rowData, setRowData] = useState({
+    1: { taskId: '1', taskName: 'Project Kickoff', dependencies: 'None', assignedTo: 'Emily Davis', condition: 'green', startDate: '2024-09-03', endDate: '2024-09-05', status: 'Pending' },
+    2: { taskId: '2', taskName: 'Design Phase', dependencies: '1', assignedTo: 'John Doe', condition: 'red', startDate: '2024-09-10', endDate: '2024-09-20', status: 'In Progress' },
+    3: { taskId: '3', taskName: 'Development', dependencies: '2', assignedTo: 'Mike Johnson', condition: 'yellow', startDate: '2024-09-17', endDate: '2024-10-10', status: 'In Progress' },
+    4: { taskId: '4', taskName: 'Testing Phase', dependencies: '3', assignedTo: 'Chris Lee', condition: 'yellow', startDate: '2024-10-01', endDate: '2024-10-15', status: 'Pending' },
+    5: { taskId: '5', taskName: 'Deployment', dependencies: '4', assignedTo: 'Chris Lee', condition: 'red', startDate: '2024-10-15', endDate: '2024-10-25', status: 'Completed' },
+  });
 
   const [editingCell, setEditingCell] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
   const [hoveredCell, setHoveredCell] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -34,13 +140,28 @@ const GridView = () => {
   const [showTextColorPicker, setShowTextColorPicker] = useState(false);
   const [showBackgroundColorPicker, setShowBackgroundColorPicker] = useState(false);
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
+  const [addColumnPosition, setAddColumnPosition] = useState({ x: 0, y: 0 });
+  const [columnPopupMode, setColumnPopupMode] = useState('add'); // 'add', 'edit'
+  const [editingColumnData, setEditingColumnData] = useState(null);
+  const [columnName, setColumnName] = useState('');
+  const [columnDescription, setColumnDescription] = useState('');
+  const [tempDropdownOptions, setTempDropdownOptions] = useState([]);
+  const [newDropdownValue, setNewDropdownValue] = useState('');
   const [newColumnType, setNewColumnType] = useState('text');
+  const [showColumnFilter, setShowColumnFilter] = useState(false);
+  const [filterPosition, setFilterPosition] = useState({ x: 0, y: 0 });
+  const [filterColumnKey, setFilterColumnKey] = useState(null);
+  const [showSortSubmenu, setShowSortSubmenu] = useState(false);
+  const [sortSubmenuPosition, setSortSubmenuPosition] = useState({ x: 0, y: 0 });
+  const [draggedColumnIndex, setDraggedColumnIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [hiddenColumns, setHiddenColumns] = useState([]);
   const [cellStyles, setCellStyles] = useState({});
   const [rowIndents, setRowIndents] = useState({});
   const [showFormatTools, setShowFormatTools] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
   const [columnWidths, setColumnWidths] = useState({});
   const [resizing, setResizing] = useState({ column: null, startX: 0, startWidth: 0 });
   const [selectedColumn, setSelectedColumn] = useState(null);
@@ -48,10 +169,44 @@ const GridView = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [frozenColumns, setFrozenColumns] = useState([]);
   const [showColumnPropertiesModal, setShowColumnPropertiesModal] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [editingColumnKey, setEditingColumnKey] = useState(null);
-  const [dropdownOptions, setDropdownOptions] = useState({});
-  const [dropdownColors, setDropdownColors] = useState({});
-  const dragRef = useRef(null);
+  const [collapsedRows, setCollapsedRows] = useState(new Set());
+  const [parentChildMap, setParentChildMap] = useState({});
+  const [dropdownOptions, setDropdownOptions] = useState({
+    status: ['Pending', 'In Progress', 'Completed']
+  });
+  const [dropdownColors, setDropdownColors] = useState({
+    status: {
+      0: 'bg-yellow-500', // Pending
+      1: 'bg-blue-500',   // In Progress
+      2: 'bg-green-500'   // Completed
+    }
+  });
+
+  const [rowHeights, setRowHeights] = useState({});
+  const [headerHeight, setHeaderHeight] = useState(48);
+  const dataRowRefs = useRef({});
+  const numberRowRefs = useRef({});
+  const dataHeaderRef = useRef(null);
+  const numberHeaderRef = useRef(null);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric'
+    });
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const convertToDateInput = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  };
 
   const getHexColor = (bgClass) => {
     const colorMap = {
@@ -106,35 +261,20 @@ const GridView = () => {
   ];
 
   const columnTypeCategories = {
-    recommended: [
-      { value: 'text', label: 'Text/number', icon: '📝' },
-      { value: 'dropdown', label: 'Dropdown list', icon: '☰' },
-      { value: 'date', label: 'Date', icon: '📅' },
-      { value: 'checkbox', label: 'Checkbox', icon: '☐' }
-    ],
     basic: [
-      { value: 'text', label: 'Text/number', icon: '📝' },
-      { value: 'autonumber', label: 'Auto-number', icon: '#' }
-    ],
-    planning: [
+      { value: 'text', label: 'Text/Number', icon: '📝' },
       { value: 'dropdown', label: 'Dropdown list', icon: '☰' },
-      { value: 'checkbox', label: 'Checkbox', icon: '☐' },
-      { value: 'status', label: 'Status', icon: '◐' },
-      { value: 'progress', label: 'Progress', icon: '📊' },
-      { value: 'trends', label: 'Trends', icon: '📈' },
-      { value: 'ratings', label: 'Ratings', icon: '⭐' }
-    ],
-    date: [
       { value: 'date', label: 'Date', icon: '📅' },
-      { value: 'createddate', label: 'Created date', icon: '📅' },
-      { value: 'modifieddate', label: 'Modified date', icon: '📅' },
-      { value: 'duration', label: 'Duration', icon: '⏱️' }
-    ],
-    people: [
-      { value: 'contact', label: 'Contact list', icon: '👤' },
-      { value: 'createdby', label: 'Created by', icon: '👤' },
-      { value: 'modifiedby', label: 'Modified by', icon: '👤' },
-      { value: 'comment', label: 'Latest comment', icon: '💬' }
+      { value: 'contact', label: 'Contact List', icon: '👤' },
+      { value: 'checkbox', label: 'Checkbox', icon: '☐' },
+      { value: 'symbols', label: 'Symbols', icon: '🔣' },
+      { value: 'autonumber', label: 'Autonumber', icon: '#' },
+      { value: 'createdby', label: 'Created By', icon: '👤' },
+      { value: 'createddate', label: 'Created Date', icon: '📅' },
+      { value: 'comment', label: 'Latest Comment', icon: '💬' },
+      { value: 'modifiedby', label: 'Modified By', icon: '👤' },
+      { value: 'modifieddate', label: 'Modified Date', icon: '📅' },
+      { value: 'status', label: 'Status', icon: '🔄' }
     ]
   };
 
@@ -149,7 +289,15 @@ const GridView = () => {
       col.key === columnKey ? { ...col, type: newType } : col
     ));
     // Clear data when column type changes
-    setData(prev => prev.map(row => ({ ...row, [columnKey]: '' })));
+    setRowData(prev => {
+      const newData = { ...prev };
+      Object.keys(newData).forEach(rowNum => {
+        if (newData[rowNum]) {
+          newData[rowNum] = { ...newData[rowNum], [columnKey]: '' };
+        }
+      });
+      return newData;
+    });
   };
 
   const addDropdownOption = (columnKey, option) => {
@@ -162,7 +310,7 @@ const GridView = () => {
       ...prev,
       [columnKey]: {
         ...prev[columnKey],
-        [newIndex]: colorOptions[0].color // Default to transparent
+        [newIndex]: 'bg-transparent' // Default to transparent
       }
     }));
   };
@@ -179,7 +327,7 @@ const GridView = () => {
     newHistory.push({
       ...action,
       timestamp: Date.now(),
-      data: JSON.parse(JSON.stringify(data)),
+      rowData: JSON.parse(JSON.stringify(rowData)),
       cellStyles: JSON.parse(JSON.stringify(cellStyles)),
       columnWidths: JSON.parse(JSON.stringify(columnWidths)),
       rowIndents: JSON.parse(JSON.stringify(rowIndents))
@@ -191,7 +339,7 @@ const GridView = () => {
   const undo = () => {
     if (historyIndex > 0) {
       const prevState = history[historyIndex - 1];
-      setData(prevState.data);
+      setRowData(prevState.rowData);
       setCellStyles(prevState.cellStyles);
       setColumnWidths(prevState.columnWidths);
       setRowIndents(prevState.rowIndents);
@@ -203,7 +351,7 @@ const GridView = () => {
   const redo = () => {
     if (historyIndex < history.length - 1) {
       const nextState = history[historyIndex + 1];
-      setData(nextState.data);
+      setRowData(nextState.rowData);
       setCellStyles(nextState.cellStyles);
       setColumnWidths(nextState.columnWidths);
       setRowIndents(nextState.rowIndents);
@@ -219,11 +367,20 @@ const GridView = () => {
     { key: 'assignedTo', label: 'Assigned To', width: '150px', type: 'contact' },
     { key: 'condition', label: 'Condition', width: '100px', type: 'condition' },
     { key: 'startDate', label: 'Start Date', width: '120px', type: 'date' },
+    { key: 'endDate', label: 'End Date', width: '120px', type: 'date' },
+    { key: 'status', label: 'Status', width: '120px', type: 'status' },
   ]);
 
   const [columnOrder, setColumnOrder] = useState(allColumns.map(col => col.key));
   const [nextColumnId, setNextColumnId] = useState(allColumns.length + 1);
 
+  const [totalRows, setTotalRows] = useState(50); // Total rows including empty ones
+
+  const addNewRow = () => {
+    setTotalRows(prev => prev + 1);
+  };
+
+  // eslint-disable-next-line no-unused-vars
   const addNewColumn = () => {
     const newColumn = {
       key: `column${nextColumnId}`,
@@ -235,7 +392,6 @@ const GridView = () => {
     setAllColumns(prev => [...prev, newColumn]);
     setColumnOrder(prev => [...prev, newColumn.key]);
     setNextColumnId(prev => prev + 1);
-    setData(prev => prev.map(row => ({ ...row, [newColumn.key]: '' })));
     setShowAddColumnModal(false);
     setNewColumnType('text');
   };
@@ -290,6 +446,51 @@ const GridView = () => {
     }
   }, [resizing]);
 
+  // Sync heights between tables
+  useEffect(() => {
+    const syncHeights = () => {
+      // Sync header heights
+      if (dataHeaderRef.current && numberHeaderRef.current) {
+        const dataHeaderHeight = dataHeaderRef.current.offsetHeight;
+        const numberHeaderHeight = numberHeaderRef.current.offsetHeight;
+        const maxHeaderHeight = Math.max(dataHeaderHeight, numberHeaderHeight, 48);
+        setHeaderHeight(maxHeaderHeight);
+      }
+      
+      // Sync row heights
+      const newRowHeights = {};
+      getAllRows().forEach(row => {
+        const dataRowRef = dataRowRefs.current[row.rowNumber];
+        const numberRowRef = numberRowRefs.current[row.rowNumber];
+        
+        if (dataRowRef && numberRowRef) {
+          const dataHeight = dataRowRef.offsetHeight;
+          const numberHeight = numberRowRef.offsetHeight;
+          const maxHeight = Math.max(dataHeight, numberHeight, 31);
+          newRowHeights[row.rowNumber] = maxHeight;
+        }
+      });
+      setRowHeights(newRowHeights);
+    };
+    
+    const timeoutId = setTimeout(syncHeights, 0);
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timeoutId);
+      setTimeout(syncHeights, 0);
+    });
+    
+    if (dataHeaderRef.current) observer.observe(dataHeaderRef.current);
+    if (numberHeaderRef.current) observer.observe(numberHeaderRef.current);
+    Object.values(dataRowRefs.current).forEach(ref => {
+      if (ref) observer.observe(ref);
+    });
+    
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [rowData, cellStyles, allColumns]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey || e.metaKey) {
@@ -300,11 +501,82 @@ const GridView = () => {
           e.preventDefault();
           redo();
         }
+      } else if (selectedCell && !editingCell) {
+        const [rowNum, colKey] = selectedCell.split('-');
+        const currentRowIndex = parseInt(rowNum);
+        const currentColIndex = visibleColumns.findIndex(col => col.key === colKey);
+        const column = visibleColumns[currentColIndex];
+        
+        // Check if it's a printable character (typing)
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (column && (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment')) {
+            e.preventDefault();
+            setEditingCell(selectedCell);
+            setIsTyping(true);
+            // Clear existing content and start with typed character
+            setTimeout(() => {
+              const input = document.querySelector(`input[data-cell="${selectedCell}"]`);
+              if (input) {
+                input.value = e.key;
+                input.focus();
+                input.setSelectionRange(1, 1);
+              }
+            }, 0);
+            return;
+          }
+        }
+        
+        let newRowIndex = currentRowIndex;
+        let newColIndex = currentColIndex;
+        
+        switch (e.key) {
+          case 'ArrowUp':
+            e.preventDefault();
+            newRowIndex = Math.max(1, currentRowIndex - 1);
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            newRowIndex = Math.min(totalRows, currentRowIndex + 1);
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            newColIndex = Math.max(0, currentColIndex - 1);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            newColIndex = Math.min(visibleColumns.length - 1, currentColIndex + 1);
+            break;
+          case 'Enter':
+            e.preventDefault();
+            if (currentRowIndex >= totalRows) {
+              setTotalRows(prev => prev + 1);
+              newRowIndex = currentRowIndex + 1;
+            } else {
+              newRowIndex = Math.min(totalRows, currentRowIndex + 1);
+            }
+            break;
+          case 'Tab':
+            e.preventDefault();
+            if (e.shiftKey) {
+              newColIndex = currentColIndex > 0 ? currentColIndex - 1 : visibleColumns.length - 1;
+              if (newColIndex === visibleColumns.length - 1) newRowIndex = Math.max(1, currentRowIndex - 1);
+            } else {
+              newColIndex = currentColIndex < visibleColumns.length - 1 ? currentColIndex + 1 : 0;
+              if (newColIndex === 0) newRowIndex = Math.min(totalRows, currentRowIndex + 1);
+            }
+            break;
+        }
+        
+        if (newRowIndex !== currentRowIndex || newColIndex !== currentColIndex) {
+          const newCell = `${newRowIndex}-${visibleColumns[newColIndex].key}`;
+          setSelectedCell(newCell);
+          updateEditorState(newCell);
+        }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [historyIndex, history]);
+  }, [historyIndex, history, selectedCell, editingCell, visibleColumns, totalRows]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -317,10 +589,26 @@ const GridView = () => {
       if (showBackgroundColorPicker && !e.target.closest('.bg-color-picker')) {
         setShowBackgroundColorPicker(false);
       }
+      if (contextMenu.isOpen) {
+        setContextMenu({ ...contextMenu, isOpen: false });
+      }
+      if (columnContextMenu.isOpen && !e.target.closest('[data-column-menu]') && !e.target.closest('.sort-submenu')) {
+        setColumnContextMenu({ ...columnContextMenu, isOpen: false });
+        setShowSortSubmenu(false);
+      }
+      if (showAddColumnModal && !e.target.closest('.fixed')) {
+        setShowAddColumnModal(false);
+      }
+      if (showColumnFilter && !e.target.closest('.fixed')) {
+        setShowColumnFilter(false);
+      }
+      if (showSortSubmenu && !e.target.closest('.sort-submenu')) {
+        setShowSortSubmenu(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showColorPicker, showTextColorPicker, showBackgroundColorPicker]);
+  }, [showColorPicker, showTextColorPicker, showBackgroundColorPicker, contextMenu, showAddColumnModal]);
 
   const handleColumnClick = (e, columnKey) => {
     if (e.target.closest('.resize-handle')) return;
@@ -328,11 +616,12 @@ const GridView = () => {
     setSelectedCell(null);
   };
 
-  const handleCellEdit = (rowId, column, value) => {
-    saveToHistory({ type: 'cell_edit', rowId, column, oldValue: data.find(r => r.id === rowId)?.[column], newValue: value });
-    setData(prev => prev.map(row => 
-      row.id === rowId ? { ...row, [column]: value } : row
-    ));
+  const handleCellEdit = (rowNumber, column, value) => {
+    saveToHistory({ type: 'cell_edit', rowNumber, column, oldValue: rowData[rowNumber]?.[column], newValue: value });
+    setRowData(prev => ({
+      ...prev,
+      [rowNumber]: { ...prev[rowNumber], [column]: value }
+    }));
     setEditingCell(null);
   };
 
@@ -387,22 +676,102 @@ const GridView = () => {
     }
   };
 
-  const indentRow = (rowId) => {
-    setRowIndents(prev => ({
-      ...prev,
-      [rowId]: Math.min((prev[rowId] || 0) + 1, 5)
-    }));
+  const indentRow = (rowNumber) => {
+    // Find the previous visible row to make it the parent
+    for (let i = rowNumber - 1; i >= 1; i--) {
+      if (rowData[i] && rowData[i].taskId) {
+        setParentChildMap(prev => ({
+          ...prev,
+          [rowNumber]: rowData[i].taskId
+        }));
+        
+        setRowIndents(prev => ({
+          ...prev,
+          [rowNumber]: Math.min((prev[rowNumber] || 0) + 1, 5)
+        }));
+        break;
+      }
+    }
   };
 
-  const outdentRow = (rowId) => {
+  const outdentRow = (rowNumber) => {
+    setParentChildMap(prev => {
+      const newMap = { ...prev };
+      delete newMap[rowNumber];
+      return newMap;
+    });
+    
     setRowIndents(prev => ({
       ...prev,
-      [rowId]: Math.max((prev[rowId] || 0) - 1, 0)
+      [rowNumber]: Math.max((prev[rowNumber] || 0) - 1, 0)
     }));
   };
 
   const getRowIndent = (rowId) => {
     return rowIndents[rowId] || 0;
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const getChildRows = (parentTaskId) => {
+    return Object.keys(rowData).filter(rowNum => parentChildMap[rowNum] === parentTaskId);
+  };
+
+  const hasChildren = (taskId) => {
+    return Object.values(parentChildMap).includes(taskId);
+  };
+
+  const toggleRowCollapse = (taskId) => {
+    setCollapsedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const isRowVisible = (rowNumber) => {
+    const parentTaskId = parentChildMap[rowNumber];
+    if (!parentTaskId) return true;
+    
+    if (collapsedRows.has(parentTaskId)) return false;
+    
+    // Find parent row number
+    const parentRowNum = Object.keys(rowData).find(num => rowData[num]?.taskId === parentTaskId);
+    if (!parentRowNum) return true;
+    
+    return isRowVisible(parentRowNum);
+  };
+
+  const getVisibleData = () => {
+    return getAllRows().filter(row => !row.isEmpty);
+  };
+
+  const getAllRows = () => {
+    const rows = [];
+    
+    for (let i = 1; i <= totalRows; i++) {
+      if (isRowVisible(i)) {
+        const data = rowData[i] || {};
+        rows.push({ 
+          rowNumber: i, 
+          isEmpty: !rowData[i],
+          ...data
+        });
+      }
+    }
+    return rows;
+  };
+
+  const expandAll = () => {
+    setCollapsedRows(new Set());
+  };
+
+  const collapseAll = () => {
+    const parentTaskIds = [...new Set(Object.values(parentChildMap))];
+    setCollapsedRows(new Set(parentTaskIds));
   };
 
   const handleIndent = () => {
@@ -443,6 +812,7 @@ const GridView = () => {
   };
 
   const toggleColumnVisibility = (columnKey) => {
+    if (columnKey === 'taskId') return; // Prevent hiding primary column
     setHiddenColumns(prev => 
       prev.includes(columnKey)
         ? prev.filter(key => key !== columnKey)
@@ -473,7 +843,6 @@ const GridView = () => {
     });
     
     setNextColumnId(prev => prev + 1);
-    setData(prev => prev.map(row => ({ ...row, [newColumn.key]: '' })));
   };
 
   const insertColumnRight = (targetColumnKey) => {
@@ -499,18 +868,14 @@ const GridView = () => {
     });
     
     setNextColumnId(prev => prev + 1);
-    setData(prev => prev.map(row => ({ ...row, [newColumn.key]: '' })));
   };
 
   const deleteColumn = (columnKey) => {
+    if (columnKey === 'taskId') return; // Prevent deletion of primary column
     setAllColumns(prev => prev.filter(col => col.key !== columnKey));
     setColumnOrder(prev => prev.filter(key => key !== columnKey));
     setHiddenColumns(prev => prev.filter(key => key !== columnKey));
     setFrozenColumns(prev => prev.filter(key => key !== columnKey));
-    setData(prev => prev.map(row => {
-      const { [columnKey]: removed, ...rest } = row;
-      return rest;
-    }));
   };
 
   const toggleColumnFreeze = (columnKey) => {
@@ -561,6 +926,7 @@ const GridView = () => {
     return cellStyles[cellKey] || {};
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleRowSelect = (rowId) => {
     setSelectedRows(prev => 
       prev.includes(rowId) 
@@ -589,9 +955,9 @@ const GridView = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Complete': return 'bg-green-100 text-green-800';
+      case 'Completed': return 'bg-green-100 text-green-800';
       case 'In Progress': return 'bg-blue-100 text-blue-800';
-      case 'Not Started': return 'bg-gray-100 text-gray-800';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -620,46 +986,86 @@ const GridView = () => {
     { label: 'Cut', icon: Scissors, shortcut: '⌘ + X', onClick: () => {} },
     { label: 'Copy', icon: Copy, shortcut: '⌘ + C', onClick: () => {} },
     { label: 'Paste', icon: Clipboard, shortcut: '⌘ + V', onClick: () => {} },
-    { label: 'Insert row above', shortcut: 'Ctrl + I', onClick: () => {} },
+    { type: 'separator' },
+    { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
     { label: 'Edit details', icon: Edit, shortcut: '⌘ + E', onClick: () => {} },
-    { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {} },
-    { label: 'Copy row link', shortcut: 'Option + Shift + C', onClick: () => {} },
-    { label: 'Promote child row', shortcut: '⌘ + [', onClick: () => outdentRow(contextMenu.rowId) },
-    { label: 'Make child row', shortcut: '⌘ + ]', onClick: () => indentRow(contextMenu.rowId) },
+    { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {}, danger: true },
+    { type: 'separator' },
+    { label: 'Copy row link', icon: Link, shortcut: 'Option + Shift + C', onClick: () => {} },
+    { type: 'separator' },
+    { label: 'Promote child row', icon: CornerUpLeft, shortcut: '⌘ + [', onClick: () => outdentRow(contextMenu.rowId) },
+    { label: 'Make child row', icon: CornerDownRight, shortcut: '⌘ + ]', onClick: () => indentRow(contextMenu.rowId) },
+    { type: 'separator' },
     { label: 'Lock row', icon: Lock, shortcut: '⌘ + Shift + L', onClick: () => {} },
   ];
 
   const columnContextMenuItems = [
-    { label: 'Insert column left', shortcut: 'Ctrl + Shift + I', onClick: () => insertColumnLeft(columnContextMenu.columnKey) },
-    { label: 'Insert column right', onClick: () => insertColumnRight(columnContextMenu.columnKey) },
-    { label: 'Rename column', icon: Edit, onClick: () => {
-      setEditingColumnKey(columnContextMenu.columnKey);
-      setShowColumnPropertiesModal(true);
+    { label: 'Insert column left', icon: Plus, shortcut: 'Ctrl + Shift + I', onClick: () => insertColumnLeft(columnContextMenu.columnKey) },
+    { label: 'Insert column right', icon: Plus, onClick: () => insertColumnRight(columnContextMenu.columnKey) },
+    // eslint-disable-next-line no-unused-vars
+    { label: 'Rename column', icon: Edit, onClick: (e) => {
+      const columnHeader = document.querySelector(`[data-column-key="${columnContextMenu.columnKey}"]`);
+      const rect = columnHeader ? columnHeader.getBoundingClientRect() : { left: columnContextMenu.position.x, bottom: columnContextMenu.position.y };
+      const column = allColumns.find(col => col.key === columnContextMenu.columnKey);
+      setAddColumnPosition({ x: rect.left - 100, y: rect.bottom + 10 });
+      setColumnPopupMode('edit');
+      setEditingColumnData(column);
+      setColumnName(column?.label || '');
+      setColumnDescription('');
+      setNewColumnType(column?.type || 'text');
+      setTempDropdownOptions(dropdownOptions[columnContextMenu.columnKey] || []);
+      setNewDropdownValue('');
+      setShowAddColumnModal(true);
     } },
-    { label: 'Delete column', icon: Trash2, shortcut: '⌘ + Shift + Delete', onClick: () => deleteColumn(columnContextMenu.columnKey) },
-    { label: 'Filter', icon: Filter, onClick: () => {} },
-    { label: 'Sort rows', onClick: () => {} },
-    { label: 'Lock column', icon: Lock, shortcut: '⌘ + Shift + L', onClick: () => {} },
-    { label: 'Resize column', shortcut: 'Opt + R', onClick: () => {} },
-    { label: 'Hide column', icon: EyeOff, onClick: () => toggleColumnVisibility(columnContextMenu.columnKey) },
+    { label: 'Delete column', icon: Trash2, shortcut: '⌘ + Shift + Delete', onClick: () => deleteColumn(columnContextMenu.columnKey), danger: true, disabled: columnContextMenu.columnKey === 'taskId' },
+    { label: 'Filter', icon: Filter, onClick: (e) => {
+      const rect = e?.target?.getBoundingClientRect() || { left: columnContextMenu.position.x, bottom: columnContextMenu.position.y };
+      setFilterPosition({ x: rect.left - 200, y: rect.bottom + 10 });
+      setFilterColumnKey(columnContextMenu.columnKey);
+      setShowColumnFilter(true);
+    } },
     { 
-      label: frozenColumns.includes(columnContextMenu.columnKey) ? 'Unfreeze column' : 'Freeze column', 
+      label: 'Sort rows', 
+      icon: ArrowUp, 
+      hasSubmenu: true,
+      onClick: () => {}
+    },
+    { label: 'Lock column', icon: Lock, shortcut: '⌘ + Shift + L', onClick: () => {} },
+    { label: 'Resize column', icon: ArrowRight, shortcut: 'Opt + R', onClick: () => {} },
+    { label: 'Hide column', icon: EyeOff, onClick: () => toggleColumnVisibility(columnContextMenu.columnKey) },
+    { label: 'Expand all', icon: ArrowDown, onClick: () => expandAll() },
+    { label: 'Collapse all', icon: ArrowUp, onClick: () => collapseAll() },
+    { 
+      label: frozenColumns.includes(columnContextMenu.columnKey) ? 'Unfreeze column' : 'Freeze column',
+      icon: frozenColumns.includes(columnContextMenu.columnKey) ? Clipboard : Clipboard,
       onClick: () => toggleColumnFreeze(columnContextMenu.columnKey) 
     },
-    { label: 'Column properties', onClick: () => {
-      setEditingColumnKey(columnContextMenu.columnKey);
-      setShowColumnPropertiesModal(true);
+    // eslint-disable-next-line no-unused-vars
+    { label: 'Column properties', icon: Settings, onClick: (e) => {
+      const columnHeader = document.querySelector(`[data-column-key="${columnContextMenu.columnKey}"]`);
+      const rect = columnHeader ? columnHeader.getBoundingClientRect() : { left: columnContextMenu.position.x, bottom: columnContextMenu.position.y };
+      const column = allColumns.find(col => col.key === columnContextMenu.columnKey);
+      setAddColumnPosition({ x: rect.left - 100, y: rect.bottom + 10 });
+      setColumnPopupMode('edit');
+      setEditingColumnData(column);
+      setColumnName(column?.label || '');
+      setColumnDescription('');
+      setNewColumnType(column?.type || 'text');
+      setTempDropdownOptions(dropdownOptions[columnContextMenu.columnKey] || []);
+      setNewDropdownValue('');
+      setShowAddColumnModal(true);
     } },
   ];
 
 
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-900 min-h-screen"
-    >
+    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden max-w-full"
+      >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-4">
@@ -683,69 +1089,56 @@ const GridView = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-white">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <Dropdown 
-              options={[{ value: 'table', label: 'Table' }]} 
-              value="Table" 
-              className="w-20" 
-            />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="p-1" 
-              onClick={undo}
-              disabled={historyIndex <= 0}
-              title="Undo (Ctrl+Z)"
-            >
+            <button className="flex items-center px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded border border-gray-300">
+              <FileText className="w-4 h-4 mr-1" />
+              Table
+              <ChevronDown className="w-3 h-3 ml-1" />
+            </button>
+            <button className="p-1 text-gray-600 hover:bg-gray-100 rounded" onClick={undo} disabled={historyIndex <= 0}>
               <Undo2 className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="p-1" 
-              onClick={redo}
-              disabled={historyIndex >= history.length - 1}
-              title="Redo (Ctrl+Y)"
-            >
+            </button>
+            <button className="p-1 text-gray-600 hover:bg-gray-100 rounded" onClick={redo} disabled={historyIndex >= history.length - 1}>
               <RotateCcw className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="p-1">
+            </button>
+            <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
               <Search className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="p-1">
-              <Filter className="w-4 h-4" />
-            </Button>
-            <Button variant={showFormatTools ? "primary" : "ghost"} size="sm" onClick={() => setShowFormatTools(!showFormatTools)}>
-              <Palette className="w-4 h-4 mr-2" />
+            </button>
+            <button className={`flex items-center px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded ${showFilter ? 'bg-blue-50' : ''}`} onClick={() => setShowFilter(!showFilter)}>
+              <Filter className="w-4 h-4 mr-1" />
+              Filter
+            </button>
+            <button className={`flex items-center px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded ${showFormatTools ? 'bg-blue-50' : ''}`} onClick={() => setShowFormatTools(!showFormatTools)}>
+              <Palette className="w-4 h-4 mr-1" />
               Format
-            </Button>
-            <Button variant="ghost" size="sm">
+            </button>
+            <button className="flex items-center px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded">
               Format rules
-            </Button>
-            <Button variant="ghost" size="sm">
+            </button>
+            <button className="flex items-center px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded">
               Formulas
-            </Button>
-            <Button variant="ghost" size="sm" className="p-1">
+            </button>
+            <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
               <MessageCircle className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="p-1">
+            </button>
+            <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
               <Paperclip className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" className="p-1">
+            </button>
+            <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
               <MoreHorizontal className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
         </div>
-        <Button variant="ghost" size="sm" className="p-1">
+        <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
           <Settings className="w-4 h-4" />
-        </Button>
+        </button>
       </div>
 
       {/* Formatting Toolbar */}
       {showFormatTools && (
-      <div className="flex items-center space-x-4 p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="flex items-center space-x-4 p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <select 
           value={fontFamily} 
           onChange={(e) => {
@@ -987,304 +1380,674 @@ const GridView = () => {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="border-collapse" style={{ tableLayout: 'fixed', width: 'max-content' }}>
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-800">
-              <th className="w-8 p-2 border border-gray-200 dark:border-gray-600">
-                <div className="flex items-center justify-center">
-                  <span className="text-xs text-gray-500">#</span>
-                </div>
-              </th>
-              {visibleColumns.map((column) => (
-                <th
-                  key={column.key}
-                  className={`p-2 border border-gray-200 dark:border-gray-600 text-left cursor-pointer relative group ${
-                    selectedColumn === column.key ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-50 dark:bg-gray-800'
-                  } ${
-                    frozenColumns.includes(column.key) ? 'sticky left-0 z-10 shadow-md' : ''
-                  }`}
-                  style={{ width: getColumnWidth(column.key) }}
-                  draggable
-                  onDragStart={(e) => handleColumnDragStart(e, column.key)}
-                  onDragOver={handleColumnDragOver}
-                  onDrop={(e) => handleColumnDrop(e, column.key)}
-                  onContextMenu={(e) => handleColumnContextMenu(e, column.key)}
-                  onClick={(e) => handleColumnClick(e, column.key)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1">
-                      <GripVertical className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                        {column.label}
-                      </span>
-                      {column.key === 'dependencies' && (
-                        <HelpCircle className="w-3 h-3 text-gray-400" />
-                      )}
-                      {column.key === 'gfgfgf' && (
-                        <HelpCircle className="w-3 h-3 text-gray-400" />
-                      )}
-                    </div>
-                    <ChevronDown className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" 
-                      onClick={(e) => handleColumnContextMenu(e, column.key)} />
+      <div className="flex rounded-lg overflow-hidden">
+        {/* Fixed Row Number Column */}
+        <div className="flex-shrink-0 rounded-l-lg overflow-hidden">
+          <table className="border-collapse">
+            <thead>
+              <tr className="bg-white dark:bg-gray-800" ref={numberHeaderRef} style={{ height: headerHeight }}>
+                <th className="w-12 px-3 py-2 border-r border-b border-gray-200 bg-white">
+                  <div className="flex items-center justify-center">
+                    <span className="text-xs text-gray-500">#</span>
                   </div>
-                  <div
-                    className="resize-handle absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-10"
-                    onMouseDown={(e) => handleResizeStart(e, column.key)}
-                  />
                 </th>
-              ))}
-              <th className="p-2 border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 w-32">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowAddColumnModal(true)}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 w-full justify-center"
+              </tr>
+            </thead>
+            <tbody>
+              {getAllRows().map((row) => (
+                <motion.tr
+                  key={row.rowNumber}
+                  ref={el => numberRowRefs.current[row.rowNumber] = el}
+                  className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
+                    selectedRows.includes(row.rowNumber) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  }`}
+                  onContextMenu={(e) => handleContextMenu(e, row.rowNumber)}
+                  style={{ height: rowHeights[row.rowNumber] || '31px' }}
                 >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-xs">Column</span>
-                </Button>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, index) => (
-              <motion.tr
-                key={row.id}
-                className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
-                  selectedRows.includes(row.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                }`}
-                onContextMenu={(e) => handleContextMenu(e, row.id)}
-              >
-                <td className="p-2 border border-gray-200 dark:border-gray-600 text-center bg-gray-50 dark:bg-gray-800">
-                  <div className="flex items-center justify-center space-x-1">
-                    {getRowIndent(row.id) > 0 && (
-                      <div className="flex">
-                        {Array.from({ length: getRowIndent(row.id) }).map((_, i) => (
-                          <div key={i} className="w-2 h-px bg-gray-300 dark:bg-gray-600 mr-1" />
-                        ))}
+                  <td className="p-0 border-r border-b border-gray-200 text-center bg-white group relative">
+                    <div className="flex items-center justify-between h-full px-3 py-1">
+                      <div className="flex items-center space-x-1">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{row.rowNumber}</span>
                       </div>
-                    )}
-                    <span className="text-xs text-gray-600 dark:text-gray-400">{index + 1}</span>
+                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          title="Copy row"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Copy row functionality
+                          }}
+                        >
+                          <Copy className="w-3 h-3 text-gray-500" />
+                        </button>
+                        <button 
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          title="Insert row"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Insert row functionality
+                          }}
+                        >
+                          <Plus className="w-3 h-3 text-gray-500" />
+                        </button>
+                        <button 
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          title="Move row"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Move row functionality
+                          }}
+                        >
+                          <GripVertical className="w-3 h-3 text-gray-500" />
+                        </button>
+                        <button 
+                          className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          title="Promote child row"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            outdentRow(row.rowNumber);
+                          }}
+                        >
+                          <ArrowLeft className="w-2.5 h-2.5 text-gray-500" />
+                        </button>
+                        <button 
+                          className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          title="Make child row"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            indentRow(row.rowNumber);
+                          }}
+                        >
+                          <ArrowRight className="w-2.5 h-2.5 text-gray-500" />
+                        </button>
+                        <button 
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          title="More options"
+                          onClick={(e) => handleContextMenu(e, row.rowNumber)}
+                        >
+                          <MoreVerticalIcon className="w-3 h-3 text-gray-500" />
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+              {/* Add Row */}
+              <tr>
+                <td className="p-2 border border-gray-200 dark:border-gray-600 text-center bg-white dark:bg-gray-800">
+                  <div className="flex items-center justify-center">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="p-1 w-8 h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center justify-center" 
+                      onClick={addNewRow}
+                      title="Add new row"
+                    >
+                      <Plus className="w-6 h-6" strokeWidth={3} />
+                    </Button>
                   </div>
                 </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Scrollable Data Columns */}
+        <div className="flex-1 overflow-x-auto rounded-r-lg">
+          <table className="border-collapse" style={{ tableLayout: 'fixed', width: 'max-content' }}>
+            <thead>
+              <tr className="bg-white dark:bg-gray-800" ref={dataHeaderRef} style={{ height: headerHeight }}>
                 {visibleColumns.map((column) => (
-                  <td
-                    key={`${row.id}-${column.key}`}
-                    className={`p-2 border border-gray-200 dark:border-gray-600 ${
-                      selectedCell === `${row.id}-${column.key}` ? 'outline outline-2 outline-blue-500 outline-offset-[-1px] bg-blue-50' : 
-                      selectedColumn === column.key ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  <th
+                    key={column.key}
+                    data-column-key={column.key}
+                    className={`px-3 py-2 border-r border-b border-gray-200 text-left cursor-pointer relative group bg-white hover:bg-gray-50 ${
+                      selectedColumn === column.key ? 'bg-blue-50' : ''
                     } ${
-                      frozenColumns.includes(column.key) ? 'sticky left-0 z-10 bg-white dark:bg-gray-900 shadow-md' : ''
+                      frozenColumns.includes(column.key) ? 'sticky left-0 z-10 shadow-md' : ''
                     }`}
-                    style={{ width: getColumnWidth(column.key), ...getCellStyle(row.id, column.key) }}
-                    onMouseEnter={() => {
-                      if (column.type === 'dropdown') {
-                        setHoveredCell(`${row.id}-${column.key}`);
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      if (column.type === 'dropdown') {
-                        setHoveredCell(null);
-                      }
-                    }}
-                    onClick={() => {
-                      const cellKey = `${row.id}-${column.key}`;
-                      setSelectedCell(cellKey);
-                      setSelectedColumn(null);
-                      
-                      // Update editor state immediately
-                      const currentStyle = cellStyles[cellKey] || {};
-                      setFontSize(currentStyle.fontSize ? currentStyle.fontSize.replace('px', '') : '16');
-                      setFontFamily(currentStyle.fontFamily || 'Arial');
-                      setIsBold(currentStyle.fontWeight === 'bold');
-                      setIsItalic(currentStyle.fontStyle === 'italic');
-                      setIsUnderline(currentStyle.textDecoration === 'underline');
-                      setTextColor(currentStyle.color || '#000000');
-                      setTextAlign(currentStyle.textAlign || 'left');
-                      
-                      if (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment') {
-                        setEditingCell(cellKey);
-                      } else if (column.type === 'dropdown') {
-                        setHoveredCell(cellKey);
-                      }
-                    }}
+                    style={{ width: getColumnWidth(column.key) }}
+                    draggable
+                    onDragStart={(e) => handleColumnDragStart(e, column.key)}
+                    onDragOver={handleColumnDragOver}
+                    onDrop={(e) => handleColumnDrop(e, column.key)}
+                    onContextMenu={(e) => handleColumnContextMenu(e, column.key)}
+                    onClick={(e) => handleColumnClick(e, column.key)}
                   >
-                    {editingCell === `${row.id}-${column.key}` ? (
-                      <input
-                        type="text"
-                        defaultValue={row[column.key]}
-                        onBlur={(e) => handleCellEdit(row.id, column.key, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleCellEdit(row.id, column.key, e.target.value);
-                          }
-                        }}
-                        className="w-full px-1 py-0 border-0 bg-transparent text-sm focus:outline-none rounded"
-                        style={getCellStyle(row.id, column.key)}
-                        autoFocus
-                      />
-                    ) : (
-                      <div className="text-sm" style={getCellStyle(row.id, column.key)}>
-                        {column.type === 'dropdown' ? (
-                          hoveredCell === `${row.id}-${column.key}` ? (
-                            <select
-                              value={row[column.key] || ''}
-                              onChange={(e) => {
-                                handleCellEdit(row.id, column.key, e.target.value);
-                                setHoveredCell(null);
-                              }}
-                              onBlur={() => setHoveredCell(null)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              autoFocus
-                            >
-                              <option value="">Select...</option>
-                              {(dropdownOptions[column.key] || []).map((opt, idx) => (
-                                <option key={idx} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="px-2 py-1 text-sm">
-                              {row[column.key] ? (
-                                <span className={`px-2 py-1 rounded ${
-                                  (() => {
-                                    const optIndex = (dropdownOptions[column.key] || []).indexOf(row[column.key]);
-                                    const colorClass = dropdownColors[column.key]?.[optIndex] || colorOptions[0].color;
-                                    const isTransparent = colorClass.includes('bg-transparent');
-                                    return isTransparent ? 'text-gray-700 border border-gray-300' : `${colorClass} text-white`;
-                                  })()
-                                }`}>
-                                  {row[column.key]}
-                                </span>
-                              ) : (
-                                <span className="text-gray-500"></span>
-                              )}
-                            </div>
-                          )
-                        ) : column.type === 'checkbox' ? (
-                          <div className="flex justify-center">
-                            <input
-                              type="checkbox"
-                              checked={row[column.key] === 'true' || row[column.key] === true}
-                              onChange={(e) => handleCellEdit(row.id, column.key, e.target.checked.toString())}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                          </div>
-                        ) : column.type === 'date' ? (
-                          <input
-                            type="date"
-                            value={row[column.key] || ''}
-                            onChange={(e) => handleCellEdit(row.id, column.key, e.target.value)}
-                            className="w-full px-2 py-1 border-0 bg-transparent text-sm focus:outline-none"
-                          />
-                        ) : column.type === 'contact' ? (
-                          row[column.key] ? (
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${getAssigneeColor(row[column.key])}`}>
-                                {getAssigneeInitials(row[column.key])}
-                              </div>
-                              <span>{row[column.key]}</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">Unassigned</span>
-                          )
-                        ) : column.type === 'condition' ? (
-                          <div className="flex justify-center">
-                            <div className={`w-4 h-4 rounded-full ${getConditionColor(row[column.key])}`}></div>
-                          </div>
-                        ) : column.type === 'autonumber' ? (
-                          <span className="text-gray-600">#{row.id}</span>
-                        ) : column.type === 'status' ? (
-                          <span className={`px-2 py-1 rounded text-xs ${getStatusColor(row[column.key])}`}>
-                            {row[column.key] || 'Not Started'}
-                          </span>
-                        ) : column.key === 'taskName' ? (
-                          <div className="flex items-center">
-                            {getRowIndent(row.id) > 0 && (
-                              <div className="flex mr-2">
-                                {Array.from({ length: getRowIndent(row.id) }).map((_, i) => (
-                                  <div key={i} className="w-4 border-l border-gray-300 dark:border-gray-600 mr-1" />
-                                ))}
-                              </div>
-                            )}
-                            <span>
-                              {row[column.key]}
-                            </span>
-                          </div>
-                        ) : (
-                          <span>{row[column.key]}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-1">
+                        <GripVertical className="w-3 h-3 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-800">
+                          {column.label}
+                        </span>
+                        {column.key === 'dependencies' && (
+                          <HelpCircle className="w-3 h-3 text-gray-400" />
+                        )}
+                        {column.key === 'gfgfgf' && (
+                          <HelpCircle className="w-3 h-3 text-gray-400" />
                         )}
                       </div>
-                    )}
-                  </td>
+                      <MoreVerticalIcon className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" 
+                        onClick={(e) => handleColumnContextMenu(e, column.key)} />
+                    </div>
+                    <div
+                      className="resize-handle absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-10"
+                      onMouseDown={(e) => handleResizeStart(e, column.key)}
+                    />
+                  </th>
                 ))}
-              </motion.tr>
-            ))}
-            {/* Add Row */}
-            <tr>
-              <td className="p-2 border border-gray-200 dark:border-gray-600 text-center bg-gray-50 dark:bg-gray-800">
-                <Button variant="ghost" size="sm" className="p-0 w-6 h-6">
-                  <Plus className="w-3 h-3" />
-                </Button>
-              </td>
-              <td colSpan={visibleColumns.length} className="p-2 border border-gray-200 dark:border-gray-600"></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                <th className="p-2 border-r border-b border-gray-200 bg-white w-12">
+                  <div className="flex items-center justify-center">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={(e) => {
+                        const rect = e.target.getBoundingClientRect();
+                        setAddColumnPosition({ x: rect.left - 300, y: rect.bottom + 10 });
+                        setColumnPopupMode('add');
+                        setColumnName(`Column${nextColumnId}`);
+                        setColumnDescription('');
+                        setTempDropdownOptions([]);
+                        setNewDropdownValue('');
+                        setNewColumnType('text');
+                        setShowAddColumnModal(true);
+                      }}
+                      className="p-1 w-8 h-8 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center justify-center"
+                      title="Add new column"
+                    >
+                      <Plus className="w-6 h-6" strokeWidth={3} />
+                    </Button>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {getAllRows().map((row) => (
+                <motion.tr
+                  key={row.rowNumber}
+                  ref={el => dataRowRefs.current[row.rowNumber] = el}
+                  className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
+                    selectedRows.includes(row.rowNumber) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  }`}
+                  onContextMenu={(e) => handleContextMenu(e, row.rowNumber)}
+                  style={{ height: rowHeights[row.rowNumber] || '31px' }}
+                >
+                  {visibleColumns.map((column) => (
+                    <td
+                      key={`${row.rowNumber}-${column.key}`}
+                      className={`px-3 py-1 border-r border-b border-gray-200 ${
+                        selectedCell === `${row.rowNumber}-${column.key}` ? 'outline outline-3 outline-blue-500 outline-offset-[-2px] bg-white rounded-md' : 
+                        selectedColumn === column.key ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
+                      } ${
+                        frozenColumns.includes(column.key) ? 'sticky left-0 z-10 bg-white shadow-md' : ''
+                      }`}
+                      style={{ width: getColumnWidth(column.key), ...getCellStyle(row.rowNumber, column.key) }}
+                      onMouseEnter={() => {
+                        if (column.type === 'dropdown' || column.type === 'status') {
+                          setHoveredCell(`${row.rowNumber}-${column.key}`);
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (column.type === 'dropdown' || column.type === 'status') {
+                          setHoveredCell(null);
+                        }
+                      }}
+                      onClick={() => {
+                        const cellKey = `${row.rowNumber}-${column.key}`;
+                        setSelectedCell(cellKey);
+                        setSelectedColumn(null);
+                        setIsTyping(false);
+                        
+                        // Update editor state immediately
+                        const currentStyle = cellStyles[cellKey] || {};
+                        setFontSize(currentStyle.fontSize ? currentStyle.fontSize.replace('px', '') : '16');
+                        setFontFamily(currentStyle.fontFamily || 'Arial');
+                        setIsBold(currentStyle.fontWeight === 'bold');
+                        setIsItalic(currentStyle.fontStyle === 'italic');
+                        setIsUnderline(currentStyle.textDecoration === 'underline');
+                        setTextColor(currentStyle.color || '#000000');
+                        setTextAlign(currentStyle.textAlign || 'left');
+                        
+                        // Only show dropdown/status on single click
+                        if (column.type === 'dropdown' || column.type === 'status') {
+                          setHoveredCell(cellKey);
+                        }
+                      }}
+                      onDoubleClick={() => {
+                        const cellKey = `${row.rowNumber}-${column.key}`;
+                        if (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment' || column.type === 'date') {
+                          setEditingCell(cellKey);
+                          setIsTyping(false);
+                        }
+                      }}
+                    >
+                      {editingCell === `${row.rowNumber}-${column.key}` && column.type !== 'date' ? (
+                        <input
+                          type="text"
+                          data-cell={`${row.rowNumber}-${column.key}`}
+                          defaultValue={isTyping ? '' : row[column.key]}
+                          onBlur={(e) => {
+                            handleCellEdit(row.rowNumber, column.key, e.target.value);
+                            setIsTyping(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleCellEdit(row.rowNumber, column.key, e.target.value);
+                              setIsTyping(false);
+                              // Move to next row in same column
+                              const nextRow = Math.min(totalRows, row.rowNumber + 1);
+                              const nextCell = `${nextRow}-${column.key}`;
+                              setSelectedCell(nextCell);
+                              updateEditorState(nextCell);
+                            } else if (e.key === 'Escape') {
+                              setEditingCell(null);
+                              setIsTyping(false);
+                            }
+                          }}
+                          className="w-full px-1 py-0 border-0 bg-transparent text-sm focus:outline-none rounded"
+                          style={getCellStyle(row.rowNumber, column.key)}
+                          autoFocus
+                        />
+                      ) : editingCell === `${row.rowNumber}-${column.key}` && column.type === 'date' ? (
+                        <div className="w-full">
+                          <DatePicker
+                            value={row[column.key] ? new Date(row[column.key]) : null}
+                            onChange={(date) => {
+                              const dateStr = date ? date.toISOString().split('T')[0] : '';
+                              handleCellEdit(row.rowNumber, column.key, dateStr);
+                              setEditingCell(null);
+                            }}
+                            onClickOutside={() => setEditingCell(null)}
+                            className="custom-date-picker"
+                            calendarClassName="custom-calendar"
+                            format="dd/MM/yyyy"
+                            clearIcon={null}
+                            calendarIcon={<Calendar className="w-4 h-4 text-gray-500" />}
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-sm" style={getCellStyle(row.rowNumber, column.key)}>
+                          {row.isEmpty ? (
+                            <span className="text-sm text-gray-400"></span>
+                          ) : column.type === 'dropdown' ? (
+                            hoveredCell === `${row.rowNumber}-${column.key}` ? (
+                              <select
+                                value={row[column.key] || ''}
+                                onChange={(e) => {
+                                  handleCellEdit(row.rowNumber, column.key, e.target.value);
+                                  setHoveredCell(null);
+                                }}
+                                onBlur={() => setHoveredCell(null)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                autoFocus
+                              >
+                                <option value="">Select...</option>
+                                {(dropdownOptions[column.key] || []).map((opt, idx) => (
+                                  <option key={idx} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="px-2 py-1 text-sm">
+                                {row[column.key] ? (
+                                  <span className={`px-2 py-1 rounded ${
+                                    (() => {
+                                      const optIndex = (dropdownOptions[column.key] || []).indexOf(row[column.key]);
+                                      const colorClass = dropdownColors[column.key]?.[optIndex] || colorOptions[0].color;
+                                      const isTransparent = colorClass.includes('bg-transparent');
+                                      return isTransparent ? 'text-gray-700' : `${colorClass} text-white`;
+                                    })()
+                                  }`}>
+                                    {row[column.key]}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500"></span>
+                                )}
+                              </div>
+                            )
+                          ) : column.type === 'checkbox' ? (
+                            <div className="flex justify-center">
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={row[column.key] === 'true' || row[column.key] === true}
+                                  onChange={(e) => handleCellEdit(row.rowNumber, column.key, e.target.checked.toString())}
+                                  className="sr-only"
+                                />
+                                <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                                  row[column.key] === 'true' || row[column.key] === true
+                                    ? 'bg-blue-600 border-blue-600'
+                                    : 'bg-white border-gray-300 hover:border-gray-400'
+                                }`}>
+                                  {(row[column.key] === 'true' || row[column.key] === true) && (
+                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </label>
+                            </div>
+                          ) : column.type === 'date' ? (
+                            <span className="text-sm cursor-pointer hover:bg-gray-100 rounded px-2 py-1">
+                              {formatDate(row[column.key]) || 'Select date'}
+                            </span>
+                          ) : column.type === 'contact' ? (
+                            row[column.key] ? (
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${getAssigneeColor(row[column.key])}`}>
+                                  {getAssigneeInitials(row[column.key])}
+                                </div>
+                                <span>{row[column.key]}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">Unassigned</span>
+                            )
+                          ) : column.type === 'condition' ? (
+                            <div className="flex justify-center">
+                              <div className={`w-4 h-4 rounded-full ${getConditionColor(row[column.key])}`}></div>
+                            </div>
+                          ) : column.type === 'autonumber' ? (
+                            <span className="text-gray-600">#{row.rowNumber}</span>
+                          ) : column.type === 'status' ? (
+                            hoveredCell === `${row.rowNumber}-${column.key}` ? (
+                              <select
+                                value={row[column.key] || 'Pending'}
+                                onChange={(e) => {
+                                  handleCellEdit(row.rowNumber, column.key, e.target.value);
+                                  setHoveredCell(null);
+                                }}
+                                onBlur={() => setHoveredCell(null)}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                autoFocus
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2 py-1 rounded text-xs cursor-pointer ${getStatusColor(row[column.key])}`}>
+                                {row[column.key] || 'Pending'}
+                              </span>
+                            )
+                          ) : column.key === 'taskId' ? (
+                            <div className="flex items-center relative">
+                              {(() => {
+                                const indentLevel = getRowIndent(row.rowNumber);
+                                const hasParent = parentChildMap[row.rowNumber];
+                                const displayIndent = hasParent ? Math.max(indentLevel, 1) : indentLevel;
+                                
+                                return displayIndent > 0 && (
+                                  <div className="flex items-center mr-2">
+                                    {Array.from({ length: displayIndent }).map((_, i) => (
+                                      <div key={i} className="w-4" />
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+                              <div className="flex items-center">
+                                {!row.isEmpty && hasChildren(row.taskId) ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleRowCollapse(row.taskId);
+                                    }}
+                                    className="w-4 h-4 flex items-center justify-center mr-1 bg-gray-50 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-sm transition-colors border border-gray-200 dark:border-gray-600"
+                                  >
+                                    <svg 
+                                      className={`w-3.5 h-3.5 text-gray-700 font-bold transition-transform ${
+                                        collapsedRows.has(row.taskId) ? '' : 'rotate-90'
+                                      }`} 
+                                      fill="currentColor" 
+                                      viewBox="0 0 20 20"
+                                      strokeWidth="2"
+                                    >
+                                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                ) : (
+                                  <div className="w-4 mr-1" />
+                                )}
+                                <span className="text-sm">{row.isEmpty ? '' : (row[column.key] || '')}</span>
+                              </div>
+                            </div>
+                          ) : column.key === 'taskName' ? (
+                            <span>{row[column.key]}</span>
+                          ) : (
+                            <span>{row[column.key]}</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  ))}
+                </motion.tr>
+              ))}
 
-      {/* Footer */}
-      <div className="flex items-center justify-end p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
-        <div className="flex items-center space-x-4">
-          <span>COUNT: {data.length}</span>
-          <span>MIN: 09/02/25</span>
-          <span>MAX: 09/08/25</span>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
-        items={contextMenuItems}
-      />
+      {/* Footer */}
+      <div className="flex items-center justify-end p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center space-x-4">
+          <span>COUNT: {getVisibleData().length}</span>
+          <span>MIN: {(() => {
+            const dates = getVisibleData().flatMap(row => [row.startDate, row.endDate]).filter(Boolean).map(d => new Date(d));
+            return dates.length ? new Date(Math.min(...dates)).toLocaleDateString('en-GB') : 'N/A';
+          })()}</span>
+          <span>MAX: {(() => {
+            const dates = getVisibleData().flatMap(row => [row.startDate, row.endDate]).filter(Boolean).map(d => new Date(d));
+            return dates.length ? new Date(Math.max(...dates)).toLocaleDateString('en-GB') : 'N/A';
+          })()}</span>
+        </div>
+      </div>
 
-      <ContextMenu
-        isOpen={columnContextMenu.isOpen}
-        position={columnContextMenu.position}
-        onClose={() => setColumnContextMenu({ ...columnContextMenu, isOpen: false })}
-        items={columnContextMenuItems}
-      />
+      {contextMenu.isOpen && (
+        <div 
+          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl py-2 z-[9999] min-w-[280px]"
+          style={{ 
+            left: contextMenu.position.x, 
+            top: contextMenu.position.y 
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenuItems.map((item, index) => {
+            if (item.type === 'separator') {
+              return <div key={index} className="h-px bg-gray-200 dark:bg-gray-600 my-2" />;
+            }
+            return (
+              <button
+                key={index}
+                className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors ${
+                  item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'
+                } ${
+                  item.disabled ? 'opacity-40 cursor-not-allowed text-gray-400' : ''
+                }`}
+                onClick={() => {
+                  if (!item.disabled) {
+                    item.onClick();
+                    setContextMenu({ ...contextMenu, isOpen: false });
+                  }
+                }}
+                disabled={item.disabled}
+              >
+                <div className="flex items-center space-x-3">
+                  {item.icon && <item.icon className="w-4 h-4" />}
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                {item.shortcut && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{item.shortcut}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {columnContextMenu.isOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-[9998]"
+            onClick={() => {
+              setColumnContextMenu({ ...columnContextMenu, isOpen: false });
+              setShowSortSubmenu(false);
+            }}
+          />
+          <div 
+            data-column-menu
+            className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl py-2 z-[9999] min-w-[280px]"
+            style={{ 
+              left: columnContextMenu.position.x, 
+              top: columnContextMenu.position.y 
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {columnContextMenuItems.map((item, index) => {
+              if (item.type === 'separator') {
+                return <div key={index} className="h-px bg-gray-200 dark:bg-gray-600 my-2" />;
+              }
+              return (
+                <button
+                  key={index}
+                  className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors ${
+                    item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'
+                  } ${
+                    item.disabled ? 'opacity-40 cursor-not-allowed text-gray-400' : ''
+                  }`}
+                  onClick={(e) => {
+                    if (!item.disabled) {
+                      item.onClick(e);
+                      if (!item.hasSubmenu) {
+                        setColumnContextMenu({ ...columnContextMenu, isOpen: false });
+                        setShowSortSubmenu(false);
+                      }
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    if (item.hasSubmenu) {
+                      const rect = e.target.getBoundingClientRect();
+                      setSortSubmenuPosition({ x: rect.right + 5, y: rect.top });
+                      setShowSortSubmenu(true);
+                    } else {
+                      setShowSortSubmenu(false);
+                    }
+                  }}
+                  disabled={item.disabled}
+                >
+                  <div className="flex items-center space-x-3">
+                    {item.icon && <item.icon className="w-4 h-4" />}
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {item.shortcut && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{item.shortcut}</span>
+                    )}
+                    {item.hasSubmenu && (
+                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <Modal isOpen={showColumnModal} onClose={() => setShowColumnModal(false)} title="Manage Columns" size="md">
         <div className="space-y-4">
           <p className="text-gray-600 dark:text-gray-400">Show or hide columns and reorder them by dragging.</p>
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {allColumns.map((column) => (
-              <div key={column.key} className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-600 rounded">
-                <div className="flex items-center space-x-3">
-                  <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
-                  <input
-                    type="checkbox"
-                    checked={!hiddenColumns.includes(column.key)}
-                    onChange={() => toggleColumnVisibility(column.key)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-900 dark:text-white font-medium">
-                    {column.label}
-                  </span>
+            {columnOrder.map((columnKey, index) => {
+              const column = allColumns.find(col => col.key === columnKey);
+              if (!column) return null;
+              
+              return (
+                <div 
+                  key={column.key} 
+                  className={`flex items-center justify-between p-3 border rounded-lg transition-all duration-200 cursor-move ${
+                    draggedColumnIndex === index ? 'opacity-50 scale-95' : ''
+                  } ${
+                    dragOverIndex === index ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                  }`}
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggedColumnIndex(index);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    setDragOverIndex(index);
+                  }}
+                  onDragLeave={() => {
+                    setDragOverIndex(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedColumnIndex !== null && draggedColumnIndex !== index) {
+                      const newOrder = [...columnOrder];
+                      const draggedKey = newOrder[draggedColumnIndex];
+                      newOrder.splice(draggedColumnIndex, 1);
+                      newOrder.splice(index, 0, draggedKey);
+                      setColumnOrder(newOrder);
+                    }
+                    setDraggedColumnIndex(null);
+                    setDragOverIndex(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedColumnIndex(null);
+                    setDragOverIndex(null);
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!hiddenColumns.includes(column.key)}
+                        onChange={() => toggleColumnVisibility(column.key)}
+                        className="sr-only"
+                        disabled={column.key === 'taskId'}
+                      />
+                      <div className={`w-5 h-5 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+                        !hiddenColumns.includes(column.key)
+                          ? 'bg-blue-600 border-blue-600'
+                          : 'bg-white border-gray-300 hover:border-gray-400'
+                      }`}>
+                        {!hiddenColumns.includes(column.key) && (
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    </label>
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-900 dark:text-white font-medium">
+                        {column.label}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {column.type === 'text' ? 'Text/Number' : 
+                         column.type === 'dropdown' ? 'Dropdown' :
+                         column.type === 'date' ? 'Date' :
+                         column.type === 'contact' ? 'Contact' :
+                         column.type === 'checkbox' ? 'Checkbox' :
+                         column.type === 'status' ? 'Status' :
+                         column.type.charAt(0).toUpperCase() + column.type.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {!hiddenColumns.includes(column.key) ? (
+                      <Eye className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {!hiddenColumns.includes(column.key) ? (
-                    <Eye className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <EyeOff className="w-4 h-4 text-gray-400" />
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-600">
             <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -1298,42 +2061,387 @@ const GridView = () => {
         </div>
       </Modal>
 
-      <Modal isOpen={showAddColumnModal} onClose={() => setShowAddColumnModal(false)} title="Add Column" size="lg">
-        <div className="space-y-4 sm:space-y-6 max-h-96 overflow-y-auto">
-          {Object.entries(columnTypeCategories).map(([category, types]) => (
-            <div key={category}>
-              <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 sm:mb-3">
-                {category === 'planning' ? 'Planning/Status' : category.charAt(0).toUpperCase() + category.slice(1)}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {types.map((type) => (
-                  <button
-                    key={type.value}
-                    onClick={() => {
-                      const newColumn = {
-                        key: `column${nextColumnId}`,
-                        label: `Column ${nextColumnId}`,
-                        width: '150px',
-                        type: type.value
-                      };
-                      
-                      setAllColumns(prev => [...prev, newColumn]);
-                      setColumnOrder(prev => [...prev, newColumn.key]);
-                      setNextColumnId(prev => prev + 1);
-                      setData(prev => prev.map(row => ({ ...row, [newColumn.key]: '' })));
-                      setShowAddColumnModal(false);
-                    }}
-                    className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors w-full"
-                  >
-                    <span className="text-base sm:text-lg flex-shrink-0">{type.icon}</span>
-                    <span className="text-xs sm:text-sm text-gray-900 dark:text-white truncate">{type.label}</span>
-                  </button>
-                ))}
+      {showSortSubmenu && (
+        <div 
+          className="fixed bg-white border border-gray-200 rounded-lg shadow-xl z-[10000] w-64 sort-submenu"
+          style={{ 
+            left: sortSubmenuPosition.x, 
+            top: sortSubmenuPosition.y 
+          }}
+          onMouseEnter={() => setShowSortSubmenu(true)}
+          onMouseLeave={() => setShowSortSubmenu(false)}
+        >
+          <div className="p-2">
+            <div className="space-y-1">
+              <button className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 rounded">
+                <span>Sort A - Z</span>
+                <span className="text-xs text-gray-500">Shift + A</span>
+              </button>
+              <button className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 rounded">
+                <span>Sort Z - A</span>
+                <span className="text-xs text-gray-500">Shift + D</span>
+              </button>
+              <div className="border-t border-gray-200 my-2"></div>
+              <button className="w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded text-left">
+                Clear all sorting on sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showColumnFilter && (
+        <div 
+          className="fixed bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] w-64"
+          style={{ 
+            left: filterPosition.x, 
+            top: filterPosition.y 
+          }}
+        >
+          <div className="p-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Sort A - Z</span>
+                <span className="text-xs text-gray-500">Shift + A</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Sort Z - A</span>
+                <span className="text-xs text-gray-500">Shift + D</span>
+              </div>
+              <div className="border-t border-gray-200 pt-2">
+                <span className="text-sm text-gray-500">Clear all sorting on sheet</span>
               </div>
             </div>
-          ))}
+          </div>
+          
+          <div className="border-t border-gray-200 p-4">
+            <div className="space-y-2">
+              {filterColumnKey === 'assignedTo' ? (
+                <>
+                  <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <input type="checkbox" className="rounded" defaultChecked />
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-xs text-white">ED</div>
+                      <span className="text-sm">Emily Davis</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <input type="checkbox" className="rounded" defaultChecked />
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-xs text-white">JD</div>
+                      <span className="text-sm">John Doe</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <input type="checkbox" className="rounded" defaultChecked />
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-xs text-white">MJ</div>
+                      <span className="text-sm">Mike Johnson</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <input type="checkbox" className="rounded" defaultChecked />
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white">CL</div>
+                      <span className="text-sm">Chris Lee</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-gray-500 p-2">No filter options available</div>
+              )}
+            </div>
+          </div>
         </div>
-      </Modal>
+      )}
+
+      {showAddColumnModal && (
+        <div 
+          className="fixed bg-white border-2 border-blue-500 rounded-lg shadow-xl z-[9999] w-80 max-h-[80vh] flex flex-col"
+          style={{ 
+            left: addColumnPosition.x, 
+            top: addColumnPosition.y 
+          }}
+        >
+          <div className="p-6 flex-1 overflow-y-auto">
+            <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Column name</label>
+              <input
+                type="text"
+                value={columnName}
+                onChange={(e) => setColumnName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Column description <span className="text-gray-500">(optional)</span></label>
+              <textarea
+                rows={3}
+                value={columnDescription}
+                onChange={(e) => setColumnDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                placeholder=""
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Column type</label>
+              <div className="relative">
+                <select
+                  value={newColumnType}
+                  onChange={(e) => setNewColumnType(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-blue-500 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                >
+                  <option value="text">📝 Text/Number</option>
+                  <option value="dropdown">☰ Dropdown list</option>
+                  <option value="date">📅 Date</option>
+                  <option value="contact">👤 Contact List</option>
+                  <option value="checkbox">☐ Checkbox</option>
+                  <option value="symbols">🔣 Symbols</option>
+                  <option value="autonumber"># Autonumber</option>
+                  <option value="createdby">👤 Created By</option>
+                  <option value="createddate">📅 Created Date</option>
+                  <option value="comment">💬 Latest Comment</option>
+                  <option value="modifiedby">👤 Modified By</option>
+                  <option value="modifieddate">📅 Modified Date</option>
+                  <option value="status">🔄 Status</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            
+            {newColumnType === 'dropdown' && (
+              <>
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm font-medium text-gray-700">Limit to one value per cell</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only" />
+                    <div className="w-12 h-6 bg-blue-500 rounded-full relative transition-colors duration-200">
+                      <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-sm transition-transform duration-200"></div>
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm font-medium text-gray-700">Limit to list values only</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only" />
+                    <div className="w-12 h-6 bg-gray-300 rounded-full relative transition-colors duration-200">
+                      <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm transition-transform duration-200"></div>
+                    </div>
+                  </label>
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Dropdown list values</span>
+                    <Clipboard className="w-5 h-5 text-gray-400" />
+                  </div>
+                  
+                  {tempDropdownOptions.map((option, index) => {
+                    const colorKey = `temp-${index}`;
+                    const currentColor = dropdownColors.temp?.[index] || 'bg-transparent';
+                    return (
+                      <div key={index} className="flex items-center space-x-2 mb-2">
+                        <div className="relative color-picker-container">
+                          <div 
+                            className={`w-3 h-3 rounded flex-shrink-0 cursor-pointer border-2 ${currentColor} ${
+                              currentColor.includes('bg-transparent') ? 'relative' : 'border-gray-300'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowColorPicker(showColorPicker === colorKey ? null : colorKey);
+                            }}
+                          >
+                            {currentColor.includes('bg-transparent') && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-2 h-0.5 bg-red-500 rotate-45"></div>
+                              </div>
+                            )}
+                          </div>
+                          {showColorPicker === colorKey && (
+                            <div className="fixed z-[100] bg-white border border-gray-300 rounded-lg shadow-xl p-3 color-picker-container" style={{
+                              left: '50%',
+                              top: '50%',
+                              transform: 'translate(-50%, -50%)'
+                            }}>
+                              <div className="grid grid-cols-5 gap-2 max-w-xs">
+                                {colorOptions.map((color) => (
+                                  <div
+                                    key={color.color}
+                                    className={`w-7 h-7 rounded cursor-pointer border-2 hover:border-gray-400 ${color.color} ${
+                                      currentColor === color.color ? 'border-gray-600 ring-2 ring-blue-500' : 'border-gray-200'
+                                    } ${color.isTransparent ? 'relative' : ''}`}
+                                    onClick={() => {
+                                      setDropdownColors(prev => ({
+                                        ...prev,
+                                        temp: {
+                                          ...prev.temp,
+                                          [index]: color.color
+                                        }
+                                      }));
+                                      setShowColorPicker(null);
+                                    }}
+                                    title={color.name}
+                                  >
+                                    {color.isTransparent && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-4 h-0.5 bg-red-500 rotate-45"></div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                              <button 
+                                onClick={() => setShowColorPicker(null)}
+                                className="mt-2 w-full px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                              >
+                                Close
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...tempDropdownOptions];
+                            newOptions[index] = e.target.value;
+                            setTempDropdownOptions(newOptions);
+                          }}
+                          className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                          onClick={() => {
+                            setTempDropdownOptions(prev => prev.filter((_, i) => i !== index));
+                            setDropdownColors(prev => {
+                              const newTemp = { ...prev.temp };
+                              delete newTemp[index];
+                              return { ...prev, temp: newTemp };
+                            });
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  
+                  <div className="max-h-40 overflow-y-auto mb-3">
+                    <input
+                      type="text"
+                      placeholder="Enter or paste values"
+                      value={newDropdownValue}
+                      onChange={(e) => setNewDropdownValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newDropdownValue.trim()) {
+                          setTempDropdownOptions(prev => [...prev, newDropdownValue.trim()]);
+                          setNewDropdownValue('');
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      if (newDropdownValue.trim()) {
+                        setTempDropdownOptions(prev => [...prev, newDropdownValue.trim()]);
+                        setNewDropdownValue('');
+                      }
+                    }}
+                    className="w-full py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 flex items-center justify-center space-x-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Value</span>
+                  </button>
+                </div>
+              </>
+            )}
+            
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-200 p-4 bg-gray-50 rounded-b-lg">
+            <div className="flex justify-end space-x-3">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setShowAddColumnModal(false);
+                  setColumnName('');
+                  setColumnDescription('');
+                  setTempDropdownOptions([]);
+                  setNewDropdownValue('');
+                  setNewColumnType('text');
+                }}
+                className="px-6 py-2"
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={() => {
+                  if (columnPopupMode === 'add') {
+                    const newColumn = {
+                      key: `column${nextColumnId}`,
+                      label: columnName || `Column ${nextColumnId}`,
+                      width: '150px',
+                      type: newColumnType
+                    };
+                    
+                    setAllColumns(prev => [...prev, newColumn]);
+                    setColumnOrder(prev => [...prev, newColumn.key]);
+                    setNextColumnId(prev => prev + 1);
+                    setRowData(prev => {
+                      const newData = { ...prev };
+                      Object.keys(newData).forEach(rowNum => {
+                        if (newData[rowNum]) {
+                          newData[rowNum] = { ...newData[rowNum], [newColumn.key]: '' };
+                        }
+                      });
+                      return newData;
+                    });
+                    
+                    if (newColumnType === 'dropdown' && tempDropdownOptions.length > 0) {
+                      setDropdownOptions(prev => ({ ...prev, [newColumn.key]: tempDropdownOptions }));
+                      const tempColors = dropdownColors.temp || {};
+                      setDropdownColors(prev => ({ 
+                        ...prev, 
+                        [newColumn.key]: tempColors,
+                        temp: {}
+                      }));
+                    }
+                  } else {
+                    // Edit mode
+                    setAllColumns(prev => prev.map(col => 
+                      col.key === editingColumnData.key 
+                        ? { ...col, label: columnName, type: newColumnType }
+                        : col
+                    ));
+                    
+                    if (newColumnType === 'dropdown' && tempDropdownOptions.length > 0) {
+                      setDropdownOptions(prev => ({ ...prev, [editingColumnData.key]: tempDropdownOptions }));
+                    }
+                  }
+                  
+                  setShowAddColumnModal(false);
+                  setColumnName('');
+                  setColumnDescription('');
+                  setTempDropdownOptions([]);
+                  setNewDropdownValue('');
+                  setNewColumnType('text');
+                }}
+                className="px-6 py-2"
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Modal isOpen={showColumnPropertiesModal} onClose={() => setShowColumnPropertiesModal(false)} title={editingColumnKey && allColumns.find(col => col.key === editingColumnKey)?.label} size="xl">
         {editingColumnKey && (() => {
@@ -1366,7 +2474,7 @@ const GridView = () => {
                     onChange={(e) => changeColumnType(editingColumnKey, e.target.value)}
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none text-sm sm:text-base"
                   >
-                    {Object.values(columnTypeCategories).flat().map((type) => (
+                    {Array.from(new Map(Object.values(columnTypeCategories).flat().map(type => [type.value, type])).values()).map((type) => (
                       <option key={type.value} value={type.value}>
                         {type.label}
                       </option>
@@ -1541,7 +2649,8 @@ const GridView = () => {
           );
         })()}
       </Modal>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 };
 
