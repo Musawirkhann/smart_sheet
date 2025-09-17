@@ -812,7 +812,6 @@ const GridView = () => {
   };
 
   const toggleColumnVisibility = (columnKey) => {
-    if (columnKey === 'taskId') return; // Prevent hiding primary column
     setHiddenColumns(prev => 
       prev.includes(columnKey)
         ? prev.filter(key => key !== columnKey)
@@ -871,7 +870,6 @@ const GridView = () => {
   };
 
   const deleteColumn = (columnKey) => {
-    if (columnKey === 'taskId') return; // Prevent deletion of primary column
     setAllColumns(prev => prev.filter(col => col.key !== columnKey));
     setColumnOrder(prev => prev.filter(key => key !== columnKey));
     setHiddenColumns(prev => prev.filter(key => key !== columnKey));
@@ -879,11 +877,31 @@ const GridView = () => {
   };
 
   const toggleColumnFreeze = (columnKey) => {
-    setFrozenColumns(prev => 
-      prev.includes(columnKey)
-        ? prev.filter(key => key !== columnKey)
-        : [...prev, columnKey]
-    );
+    setFrozenColumns(prev => {
+      const columnIndex = columnOrder.indexOf(columnKey);
+      if (prev.includes(columnKey)) {
+        // Unfreezing: keep only columns to the right of this column
+        return prev.filter(key => columnOrder.indexOf(key) > columnIndex);
+      } else {
+        // Freezing: freeze all columns from left up to and including this column
+        return columnOrder.slice(0, columnIndex + 1);
+      }
+    });
+  };
+
+  const getFrozenColumnLeft = (columnKey) => {
+    const frozenIndex = frozenColumns.indexOf(columnKey);
+    if (frozenIndex === -1) return 0;
+    
+    let left = 0;
+    for (let i = 0; i < frozenIndex; i++) {
+      left += getColumnWidth(frozenColumns[i]);
+    }
+    return left;
+  };
+
+  const isLastFrozenColumn = (columnKey) => {
+    return frozenColumns.length > 0 && frozenColumns[frozenColumns.length - 1] === columnKey;
   };
 
   const increaseFontSize = () => {
@@ -1017,7 +1035,7 @@ const GridView = () => {
       setNewDropdownValue('');
       setShowAddColumnModal(true);
     } },
-    { label: 'Delete column', icon: Trash2, shortcut: '⌘ + Shift + Delete', onClick: () => deleteColumn(columnContextMenu.columnKey), danger: true, disabled: columnContextMenu.columnKey === 'taskId' },
+    { label: 'Delete column', icon: Trash2, shortcut: '⌘ + Shift + Delete', onClick: () => deleteColumn(columnContextMenu.columnKey), danger: true },
     { label: 'Filter', icon: Filter, onClick: (e) => {
       const rect = e?.target?.getBoundingClientRect() || { left: columnContextMenu.position.x, bottom: columnContextMenu.position.y };
       setFilterPosition({ x: rect.left - 200, y: rect.bottom + 10 });
@@ -1038,7 +1056,7 @@ const GridView = () => {
     { 
       label: frozenColumns.includes(columnContextMenu.columnKey) ? 'Unfreeze column' : 'Freeze column',
       icon: frozenColumns.includes(columnContextMenu.columnKey) ? Clipboard : Clipboard,
-      onClick: () => toggleColumnFreeze(columnContextMenu.columnKey) 
+      onClick: () => toggleColumnFreeze(columnContextMenu.columnKey)
     },
     // eslint-disable-next-line no-unused-vars
     { label: 'Column properties', icon: Settings, onClick: (e) => {
@@ -1501,12 +1519,17 @@ const GridView = () => {
                   <th
                     key={column.key}
                     data-column-key={column.key}
-                    className={`px-3 py-2 border-r border-b border-gray-200 text-left cursor-pointer relative group bg-white hover:bg-gray-50 ${
+                    className={`px-3 py-2 border-b border-gray-200 text-left cursor-pointer relative group bg-white hover:bg-gray-50 ${
                       selectedColumn === column.key ? 'bg-blue-50' : ''
                     } ${
-                      frozenColumns.includes(column.key) ? 'sticky left-0 z-10 shadow-md' : ''
+                      frozenColumns.includes(column.key) ? 'sticky z-10 shadow-md' : ''
+                    } ${
+                      isLastFrozenColumn(column.key) ? 'border-r-2 border-r-blue-400 after:content-[""] after:absolute after:top-0 after:right-0 after:w-0.5 after:h-full after:bg-blue-400 after:z-20' : 'border-r'
                     }`}
-                    style={{ width: getColumnWidth(column.key) }}
+                    style={{ 
+                      width: getColumnWidth(column.key),
+                      left: frozenColumns.includes(column.key) ? `${getFrozenColumnLeft(column.key)}px` : 'auto'
+                    }}
                     draggable
                     onDragStart={(e) => handleColumnDragStart(e, column.key)}
                     onDragOver={handleColumnDragOver}
@@ -1575,13 +1598,19 @@ const GridView = () => {
                   {visibleColumns.map((column) => (
                     <td
                       key={`${row.rowNumber}-${column.key}`}
-                      className={`px-3 py-1 border-r border-b border-gray-200 ${
+                      className={`px-3 py-1 border-b border-gray-200 ${
                         selectedCell === `${row.rowNumber}-${column.key}` ? 'outline outline-3 outline-blue-500 outline-offset-[-2px] bg-white rounded-md' : 
                         selectedColumn === column.key ? 'bg-blue-50' : 'bg-white hover:bg-gray-50'
                       } ${
-                        frozenColumns.includes(column.key) ? 'sticky left-0 z-10 bg-white shadow-md' : ''
+                        frozenColumns.includes(column.key) ? 'sticky z-10 bg-white shadow-md' : ''
+                      } ${
+                        isLastFrozenColumn(column.key) ? 'border-r-2 border-r-blue-400 after:content-[""] after:absolute after:top-0 after:right-0 after:w-0.5 after:h-full after:bg-blue-400 after:z-20' : 'border-r'
                       }`}
-                      style={{ width: getColumnWidth(column.key), ...getCellStyle(row.rowNumber, column.key) }}
+                      style={{ 
+                        width: getColumnWidth(column.key), 
+                        left: frozenColumns.includes(column.key) ? `${getFrozenColumnLeft(column.key)}px` : 'auto',
+                        ...getCellStyle(row.rowNumber, column.key) 
+                      }}
                       onMouseEnter={() => {
                         if (column.type === 'dropdown' || column.type === 'status') {
                           setHoveredCell(`${row.rowNumber}-${column.key}`);
