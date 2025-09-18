@@ -8,6 +8,7 @@ import 'react-calendar/dist/Calendar.css';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
+import ProfessionalDropdown from '../components/ProfessionalDropdown';
 
 
 const GridView = () => {
@@ -115,11 +116,11 @@ const GridView = () => {
     return () => document.head.removeChild(style);
   }, []);
   const [rowData, setRowData] = useState({
-    1: { taskId: '1', taskName: 'Project Kickoff', dependencies: 'None', assignedTo: 'Emily Davis', condition: 'green', startDate: '2024-09-03', endDate: '2024-09-05', status: 'Pending' },
-    2: { taskId: '2', taskName: 'Design Phase', dependencies: '1', assignedTo: 'John Doe', condition: 'red', startDate: '2024-09-10', endDate: '2024-09-20', status: 'In Progress' },
-    3: { taskId: '3', taskName: 'Development', dependencies: '2', assignedTo: 'Mike Johnson', condition: 'yellow', startDate: '2024-09-17', endDate: '2024-10-10', status: 'In Progress' },
-    4: { taskId: '4', taskName: 'Testing Phase', dependencies: '3', assignedTo: 'Chris Lee', condition: 'yellow', startDate: '2024-10-01', endDate: '2024-10-15', status: 'Pending' },
-    5: { taskId: '5', taskName: 'Deployment', dependencies: '4', assignedTo: 'Chris Lee', condition: 'red', startDate: '2024-10-15', endDate: '2024-10-25', status: 'Completed' },
+    1: { taskId: '1', taskName: 'Project Kickoff', dependencies: 'None', assignedTo: 'emily-davis', condition: 'green', startDate: '2024-09-03', endDate: '2024-09-05', status: 'Pending' },
+    2: { taskId: '2', taskName: 'Design Phase', dependencies: '1', assignedTo: 'john-doe', condition: 'red', startDate: '2024-09-10', endDate: '2024-09-20', status: 'In Progress' },
+    3: { taskId: '3', taskName: 'Development', dependencies: '2', assignedTo: 'mike-johnson', condition: 'yellow', startDate: '2024-09-17', endDate: '2024-10-10', status: 'In Progress' },
+    4: { taskId: '4', taskName: 'Testing Phase', dependencies: '3', assignedTo: 'chris-lee', condition: 'yellow', startDate: '2024-10-01', endDate: '2024-10-15', status: 'Pending' },
+    5: { taskId: '5', taskName: 'Deployment', dependencies: '4', assignedTo: 'chris-lee', condition: 'red', startDate: '2024-10-15', endDate: '2024-10-25', status: 'Completed' },
   });
 
   const [editingCell, setEditingCell] = useState(null);
@@ -185,7 +186,15 @@ const GridView = () => {
   const [collapsedRows, setCollapsedRows] = useState(new Set());
   const [parentChildMap, setParentChildMap] = useState({});
   const [dropdownOptions, setDropdownOptions] = useState({
-    status: ['Pending', 'In Progress', 'Completed']
+    status: ['Pending', 'In Progress', 'Completed'],
+    assignedTo: [
+      { value: 'musawir-khan', label: 'Musawir Khan', name: 'Musawir Khan', email: 'musawir.khan@yourcompany.com' },
+      { value: 'john-doe', label: 'John Doe', name: 'John Doe', email: 'john.doe@yourcompany.com' },
+      { value: 'mike-johnson', label: 'Mike Johnson', name: 'Mike Johnson', email: 'mike.johnson@yourcompany.com' },
+      { value: 'chris-lee', label: 'Chris Lee', name: 'Chris Lee', email: 'chris.lee@yourcompany.com' },
+      { value: 'emily-davis', label: 'Emily Davis', name: 'Emily Davis', email: 'emily.davis@yourcompany.com' },
+      { value: 'sarah-wilson', label: 'Sarah Wilson', name: 'Sarah Wilson', email: 'sarah.wilson@yourcompany.com' }
+    ]
   });
 
   // Toast notification state
@@ -203,9 +212,17 @@ const GridView = () => {
 
   const [dropdownColors, setDropdownColors] = useState({
     status: {
-      0: 'bg-yellow-500', // Pending
-      1: 'bg-blue-500',   // In Progress
-      2: 'bg-green-500'   // Completed
+      0: 'bg-yellow-500', // Pending - yellow
+      1: 'bg-blue-500',   // In Progress - blue
+      2: 'bg-green-500'   // Completed - green
+    },
+    assignedTo: {
+      0: 'bg-transparent border-2 border-gray-400', // Musawir Khan - transparent by default
+      1: 'bg-transparent border-2 border-gray-400', // John Doe - transparent by default
+      2: 'bg-transparent border-2 border-gray-400', // Mike Johnson - transparent by default
+      3: 'bg-transparent border-2 border-gray-400', // Chris Lee - transparent by default
+      4: 'bg-transparent border-2 border-gray-400', // Emily Davis - transparent by default
+      5: 'bg-transparent border-2 border-gray-400'  // Sarah Wilson - transparent by default
     }
   });
 
@@ -313,6 +330,20 @@ const GridView = () => {
     setAllColumns(prev => prev.map(col => 
       col.key === columnKey ? { ...col, type: newType } : col
     ));
+    
+    // Initialize status column colors if changing to status type
+    if (newType === 'status') {
+      setDropdownOptions(prev => ({ ...prev, [columnKey]: ['Pending', 'In Progress', 'Completed'] }));
+      setDropdownColors(prev => ({
+        ...prev,
+        [columnKey]: {
+          0: 'bg-yellow-500', // Pending
+          1: 'bg-blue-500',   // In Progress
+          2: 'bg-green-500'   // Completed
+        }
+      }));
+    }
+    
     // Clear data when column type changes
     setRowData(prev => {
       const newData = { ...prev };
@@ -335,7 +366,7 @@ const GridView = () => {
       ...prev,
       [columnKey]: {
         ...prev[columnKey],
-        [newIndex]: 'bg-transparent' // Default to transparent
+        [newIndex]: 'bg-transparent border-2 border-gray-400' // Default to transparent with border
       }
     }));
   };
@@ -403,6 +434,203 @@ const GridView = () => {
 
   const addNewRow = () => {
     setTotalRows(prev => prev + 1);
+  };
+
+  // Insert a new row above the specified row number
+  const insertRowAbove = (targetRowNumber) => {
+    console.log('Inserting row above:', targetRowNumber);
+
+    if (targetRowNumber < 1) return;
+
+    const newRowData = {};
+    const newCellStyles = {};
+    const newRowIndents = {};
+    const newRowHeights = {};
+
+    // Shift all rows down from targetRowNumber onwards
+    for (let rowNum = totalRows; rowNum >= targetRowNumber; rowNum--) {
+      const newRowNum = rowNum + 1;
+
+      // Shift row data
+      if (rowData[rowNum]) {
+        newRowData[newRowNum] = { ...rowData[rowNum] };
+      }
+
+      // Shift cell styles
+      Object.keys(cellStyles).forEach(cellKey => {
+        if (cellKey.startsWith(`${rowNum}-`)) {
+          const newCellKey = cellKey.replace(`${rowNum}-`, `${newRowNum}-`);
+          newCellStyles[newCellKey] = cellStyles[cellKey];
+        }
+      });
+
+      // Shift row indents
+      if (rowIndents[rowNum] !== undefined) {
+        newRowIndents[newRowNum] = rowIndents[rowNum];
+      }
+
+      // Shift row heights
+      if (rowHeights[rowNum] !== undefined) {
+        newRowHeights[newRowNum] = rowHeights[rowNum];
+      }
+    }
+
+    // Insert empty row at target position
+    newRowData[targetRowNumber] = {};
+
+    // Update state
+    setRowData(prev => ({ ...prev, ...newRowData }));
+    setCellStyles(prev => {
+      const updated = { ...prev };
+      Object.keys(newCellStyles).forEach(key => {
+        delete updated[key.replace(`${targetRowNumber}-`, `${targetRowNumber + 1}-`)];
+        updated[key] = newCellStyles[key];
+      });
+      return updated;
+    });
+    setRowIndents(prev => ({ ...prev, ...newRowIndents }));
+    setRowHeights(prev => ({ ...prev, ...newRowHeights }));
+    setTotalRows(prev => prev + 1);
+
+    // Update parent-child relationships
+    const newParentChildMap = {};
+    Object.entries(parentChildMap).forEach(([childRow, parentRow]) => {
+      const childRowNum = parseInt(childRow);
+      const parentRowNum = parseInt(parentRow);
+
+      if (childRowNum >= targetRowNumber) {
+        newParentChildMap[childRowNum + 1] = parentRowNum >= targetRowNumber ? parentRowNum + 1 : parentRowNum;
+      } else {
+        newParentChildMap[childRowNum] = parentRowNum >= targetRowNumber ? parentRowNum + 1 : parentRowNum;
+      }
+    });
+    setParentChildMap(newParentChildMap);
+
+    // Update selected cell if it was affected
+    if (selectedCell) {
+      const [selectedRowNum, colKey] = selectedCell.split('-');
+      const selectedRow = parseInt(selectedRowNum);
+      if (selectedRow >= targetRowNumber) {
+        setSelectedCell(`${selectedRow + 1}-${colKey}`);
+      }
+    }
+
+    console.log('Row inserted above successfully');
+    showToast(`Row inserted above row ${targetRowNumber}`, 'success');
+  };
+
+  // Insert a new row below the specified row number
+  const insertRowBelow = (targetRowNumber) => {
+    console.log('Inserting row below:', targetRowNumber);
+
+    const insertPosition = targetRowNumber + 1;
+    insertRowAbove(insertPosition);
+  };
+
+  // Delete the specified row
+  const deleteRow = (targetRowNumber) => {
+    console.log('Deleting row:', targetRowNumber);
+
+    if (targetRowNumber < 1 || targetRowNumber > totalRows) return;
+
+    const newRowData = { ...rowData };
+    const newCellStyles = { ...cellStyles };
+    const newRowIndents = { ...rowIndents };
+    const newRowHeights = { ...rowHeights };
+
+    // Remove the target row
+    delete newRowData[targetRowNumber];
+    delete newRowIndents[targetRowNumber];
+    delete newRowHeights[targetRowNumber];
+
+    // Remove cell styles for the target row
+    Object.keys(newCellStyles).forEach(cellKey => {
+      if (cellKey.startsWith(`${targetRowNumber}-`)) {
+        delete newCellStyles[cellKey];
+      }
+    });
+
+    // Shift all subsequent rows up
+    for (let rowNum = targetRowNumber + 1; rowNum <= totalRows; rowNum++) {
+      const newRowNum = rowNum - 1;
+
+      // Shift row data
+      if (newRowData[rowNum]) {
+        newRowData[newRowNum] = { ...newRowData[rowNum] };
+        delete newRowData[rowNum];
+      }
+
+      // Shift cell styles
+      Object.keys(newCellStyles).forEach(cellKey => {
+        if (cellKey.startsWith(`${rowNum}-`)) {
+          const newCellKey = cellKey.replace(`${rowNum}-`, `${newRowNum}-`);
+          newCellStyles[newCellKey] = newCellStyles[cellKey];
+          delete newCellStyles[cellKey];
+        }
+      });
+
+      // Shift row indents
+      if (newRowIndents[rowNum] !== undefined) {
+        newRowIndents[newRowNum] = newRowIndents[rowNum];
+        delete newRowIndents[rowNum];
+      }
+
+      // Shift row heights
+      if (newRowHeights[rowNum] !== undefined) {
+        newRowHeights[newRowNum] = newRowHeights[rowNum];
+        delete newRowHeights[rowNum];
+      }
+    }
+
+    // Update state
+    setRowData(newRowData);
+    setCellStyles(newCellStyles);
+    setRowIndents(newRowIndents);
+    setRowHeights(newRowHeights);
+    setTotalRows(prev => prev - 1);
+
+    // Update parent-child relationships
+    const newParentChildMap = {};
+    Object.entries(parentChildMap).forEach(([childRow, parentRow]) => {
+      const childRowNum = parseInt(childRow);
+      const parentRowNum = parseInt(parentRow);
+
+      if (childRowNum > targetRowNumber) {
+        // Child row is after deleted row, shift it up
+        const newChildRow = childRowNum - 1;
+        const newParentRow = parentRowNum > targetRowNumber ? parentRowNum - 1 : parentRowNum;
+        if (newParentRow !== targetRowNumber) { // Don't create self-references
+          newParentChildMap[newChildRow] = newParentRow;
+        }
+      } else if (childRowNum < targetRowNumber) {
+        // Child row is before deleted row
+        const newParentRow = parentRowNum > targetRowNumber ? parentRowNum - 1 : parentRowNum;
+        if (newParentRow !== targetRowNumber) { // Don't create self-references
+          newParentChildMap[childRowNum] = newParentRow;
+        }
+      }
+      // If childRowNum === targetRowNumber, it's the deleted row, skip it
+    });
+    setParentChildMap(newParentChildMap);
+
+    // Update selected cell if it was affected
+    if (selectedCell) {
+      const [selectedRowNum, colKey] = selectedCell.split('-');
+      const selectedRow = parseInt(selectedRowNum);
+      if (selectedRow === targetRowNumber) {
+        // Selected cell was in deleted row, clear selection
+        setSelectedCell(null);
+      } else if (selectedRow > targetRowNumber) {
+        // Selected cell was after deleted row, shift it up
+        setSelectedCell(`${selectedRow - 1}-${colKey}`);
+      }
+    }
+
+    // Update selected rows
+    setSelectedRows(prev => prev.filter(rowId => rowId !== targetRowNumber).map(rowId => rowId > targetRowNumber ? rowId - 1 : rowId));
+
+    console.log('Row deleted successfully');
+    showToast(`Row ${targetRowNumber} deleted`, 'success');
   };
 
   // eslint-disable-next-line no-unused-vars
@@ -813,6 +1041,16 @@ const GridView = () => {
         } else if (e.key === 'v') {
           e.preventDefault();
           pasteSelection();
+        } else if (e.key === 'i' && !e.shiftKey) {
+          // Ctrl + I: Insert row above current selection
+          e.preventDefault();
+          const currentRow = selectedCell ? parseInt(selectedCell.split('-')[0]) : 1;
+          insertRowAbove(currentRow);
+        } else if (e.key === 'i' && e.shiftKey) {
+          // Ctrl + Shift + I: Insert row below current selection
+          e.preventDefault();
+          const currentRow = selectedCell ? parseInt(selectedCell.split('-')[0]) : 1;
+          insertRowBelow(currentRow);
         }
       } else if (selectedCell && !editingCell) {
         const [rowNum, colKey] = selectedCell.split('-');
@@ -877,6 +1115,11 @@ const GridView = () => {
               newColIndex = currentColIndex < visibleColumns.length - 1 ? currentColIndex + 1 : 0;
               if (newColIndex === 0) newRowIndex = Math.min(totalRows, currentRowIndex + 1);
             }
+            break;
+          case 'Delete':
+          case 'Backspace':
+            e.preventDefault();
+            deleteRow(currentRowIndex);
             break;
         }
         
@@ -1435,7 +1678,9 @@ const GridView = () => {
     }
   };
 
-  const getAssigneeInitials = (name) => {
+  const getAssigneeInitials = (value) => {
+    const contact = dropdownOptions.assignedTo?.find(contact => contact.value === value);
+    const name = contact?.name || contact?.label || value;
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
@@ -1443,6 +1688,11 @@ const GridView = () => {
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'];
     const index = name.length % colors.length;
     return colors[index];
+  };
+
+  const getContactDisplayName = (value) => {
+    const contact = dropdownOptions.assignedTo?.find(contact => contact.value === value);
+    return contact?.name || contact?.label || value;
   };
 
   const handleColumnContextMenu = (e, columnKey) => {
@@ -1464,9 +1714,9 @@ const GridView = () => {
         { label: 'Copy row', icon: Copy, shortcut: 'Ctrl + Shift + C', onClick: () => copyRowToClipboard(contextMenuRowId) },
         { label: 'Paste row', icon: Clipboard, shortcut: 'Ctrl + Shift + V', onClick: () => pasteRow(contextMenuRowId), disabled: !copiedRow },
         { type: 'separator' },
-        { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
-        { label: 'Insert row below', icon: Plus, shortcut: 'Ctrl + Shift + I', onClick: () => {} },
-        { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {}, danger: true },
+        { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => insertRowAbove(contextMenuRowId) },
+        { label: 'Insert row below', icon: Plus, shortcut: 'Ctrl + Shift + I', onClick: () => insertRowBelow(contextMenuRowId) },
+        { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => deleteRow(contextMenuRowId), danger: true },
         { type: 'separator' },
         { label: 'Copy row link', icon: Link, shortcut: 'Option + Shift + C', onClick: () => {} },
         { type: 'separator' },
@@ -1485,8 +1735,9 @@ const GridView = () => {
         { label: 'Copy row', icon: Copy, shortcut: 'Ctrl + Shift + C', onClick: () => copyRowToClipboard(contextMenuRowId) },
         { label: 'Paste row', icon: Clipboard, shortcut: 'Ctrl + Shift + V', onClick: () => pasteRow(contextMenuRowId), disabled: !copiedRow },
         { type: 'separator' },
-        { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
-        { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {}, danger: true },
+        { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => insertRowAbove(contextMenuRowId) },
+        { label: 'Insert row below', icon: Plus, shortcut: 'Ctrl + Shift + I', onClick: () => insertRowBelow(contextMenuRowId) },
+        { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => deleteRow(contextMenuRowId), danger: true },
         { type: 'separator' },
         { label: 'Promote child row', icon: CornerUpLeft, shortcut: '⌘ + [', onClick: () => outdentRow(contextMenuRowId) },
         { label: 'Make child row', icon: CornerDownRight, shortcut: '⌘ + ]', onClick: () => indentRow(contextMenuRowId) },
@@ -1533,6 +1784,19 @@ const GridView = () => {
       setColumnDescription('');
       setNewColumnType(column?.type || 'text');
       setTempDropdownOptions(dropdownOptions[columnContextMenu.columnKey] || []);
+      // Load existing colors into temp state (same as Column properties)
+      const existingColors = dropdownColors[columnContextMenu.columnKey] || {};
+      // For status columns, ensure default colors are set if not already present
+      if (column?.type === 'status' && Object.keys(existingColors).length === 0) {
+        const statusColors = {
+          0: 'bg-yellow-500', // Pending
+          1: 'bg-blue-500',   // In Progress  
+          2: 'bg-green-500'   // Completed
+        };
+        setDropdownColors(prev => ({ ...prev, temp: statusColors }));
+      } else {
+        setDropdownColors(prev => ({ ...prev, temp: existingColors }));
+      }
       setNewDropdownValue('');
       setShowAddColumnModal(true);
     } },
@@ -1571,6 +1835,19 @@ const GridView = () => {
       setColumnDescription('');
       setNewColumnType(column?.type || 'text');
       setTempDropdownOptions(dropdownOptions[columnContextMenu.columnKey] || []);
+      // Load existing colors into temp state
+      const existingColors = dropdownColors[columnContextMenu.columnKey] || {};
+      // For status columns, ensure default colors are set if not already present
+      if (column?.type === 'status' && Object.keys(existingColors).length === 0) {
+        const statusColors = {
+          0: 'bg-yellow-500', // Pending
+          1: 'bg-blue-500',   // In Progress  
+          2: 'bg-green-500'   // Completed
+        };
+        setDropdownColors(prev => ({ ...prev, temp: statusColors }));
+      } else {
+        setDropdownColors(prev => ({ ...prev, temp: existingColors }));
+      }
       setNewDropdownValue('');
       setShowAddColumnModal(true);
     } },
@@ -2267,35 +2544,53 @@ const GridView = () => {
                             <span className="text-sm text-gray-400"></span>
                           ) : column.type === 'dropdown' ? (
                             hoveredCell === `${row.rowNumber}-${column.key}` ? (
-                              <select
+                              <ProfessionalDropdown
                                 value={row[column.key] || ''}
-                                onChange={(e) => {
-                                  handleCellEdit(row.rowNumber, column.key, e.target.value);
+                                onChange={(value) => {
+                                  handleCellEdit(row.rowNumber, column.key, value);
                                   setHoveredCell(null);
                                 }}
                                 onBlur={() => setHoveredCell(null)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                options={Array.isArray(dropdownOptions[column.key]) 
+                                  ? (typeof dropdownOptions[column.key][0] === 'string' 
+                                    ? dropdownOptions[column.key].map(opt => ({ value: opt, label: opt }))
+                                    : dropdownOptions[column.key])
+                                  : []}
+                                placeholder="Select..."
+                                showColors={dropdownColors[column.key] ? true : false}
+                                colorMap={dropdownColors[column.key] || {}}
                                 autoFocus
-                              >
-                                <option value="">Select...</option>
-                                {(dropdownOptions[column.key] || []).map((opt, idx) => (
-                                  <option key={idx} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
+                                size="sm"
+                                className="min-w-0"
+                              />
                             ) : (
                               <div className="px-2 py-1 text-sm">
                                 {row[column.key] ? (
                                   <span className={`px-2 py-1 rounded ${
                                     (() => {
-                                      const optIndex = (dropdownOptions[column.key] || []).indexOf(row[column.key]);
-                                      const colorClass = dropdownColors[column.key]?.[optIndex] || colorOptions[0].color;
+                                      const options = dropdownOptions[column.key] || [];
+                                      let optIndex = -1;
+                                      
+                                      if (typeof options[0] === 'string') {
+                                        optIndex = options.indexOf(row[column.key]);
+                                      } else {
+                                        optIndex = options.findIndex(opt => opt.value === row[column.key]);
+                                      }
+                                      
+                                      const colorClass = dropdownColors[column.key]?.[optIndex] || 'bg-transparent border-2 border-gray-400';
                                       const isTransparent = colorClass.includes('bg-transparent');
-                                      return isTransparent ? 'text-gray-700' : `${colorClass} text-white`;
+                                      return isTransparent ? 'text-gray-700 bg-transparent' : `${colorClass} text-white`;
                                     })()
                                   }`}>
-                                    {row[column.key]}
+                                    {(() => {
+                                      const options = dropdownOptions[column.key] || [];
+                                      if (typeof options[0] === 'string') {
+                                        return row[column.key];
+                                      } else {
+                                        const option = options.find(opt => opt.value === row[column.key]);
+                                        return option?.label || row[column.key];
+                                      }
+                                    })()}
                                   </span>
                                 ) : (
                                   <span className="text-gray-500"></span>
@@ -2329,15 +2624,31 @@ const GridView = () => {
                               {formatDate(row[column.key]) || 'Select date'}
                             </span>
                           ) : column.type === 'contact' ? (
-                            row[column.key] ? (
-                              <div className="flex items-center space-x-2">
+                            hoveredCell === `${row.rowNumber}-${column.key}` ? (
+                              <ProfessionalDropdown
+                                value={row[column.key] || ''}
+                                onChange={(value) => {
+                                  handleCellEdit(row.rowNumber, column.key, value);
+                                  setHoveredCell(null);
+                                }}
+                                onBlur={() => setHoveredCell(null)}
+                                options={dropdownOptions.assignedTo || []}
+                                placeholder="Select contact..."
+                                showAvatar={true}
+                                showSearch={true}
+                                autoFocus
+                                size="sm"
+                                className="min-w-0"
+                              />
+                            ) : row[column.key] ? (
+                              <div className="flex items-center space-x-2 px-2 py-1">
                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs text-white ${getAssigneeColor(row[column.key])}`}>
                                   {getAssigneeInitials(row[column.key])}
                                 </div>
-                                <span>{row[column.key]}</span>
+                                <span>{getContactDisplayName(row[column.key])}</span>
                               </div>
                             ) : (
-                              <span className="text-gray-500">Unassigned</span>
+                              <span className="text-gray-500 px-2 py-1">Unassigned</span>
                             )
                           ) : column.type === 'condition' ? (
                             <div className="flex justify-center">
@@ -2347,20 +2658,24 @@ const GridView = () => {
                             <span className="text-gray-600">#{row.rowNumber}</span>
                           ) : column.type === 'status' ? (
                             hoveredCell === `${row.rowNumber}-${column.key}` ? (
-                              <select
-                                value={row[column.key] || 'Pending'}
-                                onChange={(e) => {
-                                  handleCellEdit(row.rowNumber, column.key, e.target.value);
+                              <ProfessionalDropdown
+                                value={row[column.key] || ''}
+                                onChange={(value) => {
+                                  handleCellEdit(row.rowNumber, column.key, value);
                                   setHoveredCell(null);
                                 }}
                                 onBlur={() => setHoveredCell(null)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                options={dropdownOptions.status?.map(opt => ({
+                                  value: opt,
+                                  label: opt
+                                })) || []}
+                                placeholder="Select status..."
+                                showColors={true}
+                                colorMap={dropdownColors.status}
                                 autoFocus
-                              >
-                                <option value="Pending">Pending</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                              </select>
+                                size="sm"
+                                className="min-w-0"
+                              />
                             ) : (
                               <span className={`px-2 py-1 rounded text-xs cursor-pointer ${getStatusColor(row[column.key])}`}>
                                 {row[column.key] || 'Pending'}
@@ -2803,28 +3118,57 @@ const GridView = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Column type</label>
-              <div className="relative">
-                <select
-                  value={newColumnType}
-                  onChange={(e) => setNewColumnType(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-blue-500 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-                >
-                  <option value="text">📝 Text/Number</option>
-                  <option value="dropdown">☰ Dropdown list</option>
-                  <option value="date">📅 Date</option>
-                  <option value="contact">👤 Contact List</option>
-                  <option value="checkbox">☐ Checkbox</option>
-                  <option value="symbols">🔣 Symbols</option>
-                  <option value="autonumber"># Autonumber</option>
-                  <option value="createdby">👤 Created By</option>
-                  <option value="createddate">📅 Created Date</option>
-                  <option value="comment">💬 Latest Comment</option>
-                  <option value="modifiedby">👤 Modified By</option>
-                  <option value="modifieddate">📅 Modified Date</option>
-                  <option value="status">🔄 Status</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
+              <ProfessionalDropdown
+                value={newColumnType}
+                onChange={(value) => {
+                  // Only process change if it's actually different
+                  if (value === newColumnType) return;
+                  
+                  setNewColumnType(value);
+                  // Initialize status colors when status type is selected
+                  if (value === 'status') {
+                    setTempDropdownOptions(['Pending', 'In Progress', 'Completed']);
+                    setDropdownColors(prev => ({
+                      ...prev,
+                      temp: {
+                        0: 'bg-yellow-500', // Pending
+                        1: 'bg-blue-500',   // In Progress
+                        2: 'bg-green-500'   // Completed
+                      }
+                    }));
+                  } else if (value === 'dropdown') {
+                    // Only clear temp options if we're in add mode, preserve existing in edit mode
+                    if (columnPopupMode === 'add') {
+                      setTempDropdownOptions([]);
+                      setDropdownColors(prev => ({ ...prev, temp: {} }));
+                    }
+                    // In edit mode, keep existing temp dropdown options and colors
+                  } else {
+                    // For other column types, clear dropdown-specific temp data
+                    if (columnPopupMode === 'add') {
+                      setTempDropdownOptions([]);
+                      setDropdownColors(prev => ({ ...prev, temp: {} }));
+                    }
+                  }
+                }}
+                options={[
+                  { value: 'text', label: '📝 Text/Number' },
+                  { value: 'dropdown', label: '☰ Dropdown list' },
+                  { value: 'date', label: '📅 Date' },
+                  { value: 'contact', label: '👤 Contact List' },
+                  { value: 'checkbox', label: '☐ Checkbox' },
+                  { value: 'symbols', label: '🔣 Symbols' },
+                  { value: 'autonumber', label: '# Autonumber' },
+                  { value: 'createdby', label: '👤 Created By' },
+                  { value: 'createddate', label: '📅 Created Date' },
+                  { value: 'comment', label: '💬 Latest Comment' },
+                  { value: 'modifiedby', label: '👤 Modified By' },
+                  { value: 'modifieddate', label: '📅 Modified Date' },
+                  { value: 'status', label: '🔄 Status' }
+                ]}
+                placeholder="Select column type..."
+                className="border-2 border-blue-500"
+              />
             </div>
             
             {newColumnType === 'dropdown' && (
@@ -2857,7 +3201,7 @@ const GridView = () => {
                   
                   {tempDropdownOptions.map((option, index) => {
                     const colorKey = `temp-${index}`;
-                    const currentColor = dropdownColors.temp?.[index] || 'bg-transparent';
+                    const currentColor = dropdownColors.temp?.[index] || 'bg-transparent border-2 border-gray-400';
                     return (
                       <div key={index} className="flex items-center space-x-2 mb-2">
                         <div className="relative color-picker-container">
@@ -2953,7 +3297,15 @@ const GridView = () => {
                       onChange={(e) => setNewDropdownValue(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && newDropdownValue.trim()) {
+                          const newIndex = tempDropdownOptions.length;
                           setTempDropdownOptions(prev => [...prev, newDropdownValue.trim()]);
+                          setDropdownColors(prev => ({
+                            ...prev,
+                            temp: {
+                              ...prev.temp,
+                              [newIndex]: 'bg-transparent border-2 border-gray-400'
+                            }
+                          }));
                           setNewDropdownValue('');
                         }
                       }}
@@ -2964,7 +3316,15 @@ const GridView = () => {
                   <button 
                     onClick={() => {
                       if (newDropdownValue.trim()) {
+                        const newIndex = tempDropdownOptions.length;
                         setTempDropdownOptions(prev => [...prev, newDropdownValue.trim()]);
+                        setDropdownColors(prev => ({
+                          ...prev,
+                          temp: {
+                            ...prev.temp,
+                            [newIndex]: 'bg-transparent border-2 border-gray-400'
+                          }
+                        }));
                         setNewDropdownValue('');
                       }
                     }}
@@ -2991,6 +3351,7 @@ const GridView = () => {
                   setTempDropdownOptions([]);
                   setNewDropdownValue('');
                   setNewColumnType('text');
+                  setDropdownColors(prev => ({ ...prev, temp: {} }));
                 }}
                 className="px-6 py-2"
               >
@@ -3028,6 +3389,17 @@ const GridView = () => {
                         [newColumn.key]: tempColors,
                         temp: {}
                       }));
+                    } else if (newColumnType === 'status') {
+                      setDropdownOptions(prev => ({ ...prev, [newColumn.key]: ['Pending', 'In Progress', 'Completed'] }));
+                      setDropdownColors(prev => ({
+                        ...prev,
+                        [newColumn.key]: {
+                          0: 'bg-yellow-500', // Pending
+                          1: 'bg-blue-500',   // In Progress
+                          2: 'bg-green-500'   // Completed
+                        },
+                        temp: {}
+                      }));
                     }
                   } else {
                     // Edit mode
@@ -3039,6 +3411,23 @@ const GridView = () => {
                     
                     if (newColumnType === 'dropdown' && tempDropdownOptions.length > 0) {
                       setDropdownOptions(prev => ({ ...prev, [editingColumnData.key]: tempDropdownOptions }));
+                      const tempColors = dropdownColors.temp || {};
+                      setDropdownColors(prev => ({ 
+                        ...prev, 
+                        [editingColumnData.key]: tempColors,
+                        temp: {}
+                      }));
+                    } else if (newColumnType === 'status') {
+                      setDropdownOptions(prev => ({ ...prev, [editingColumnData.key]: ['Pending', 'In Progress', 'Completed'] }));
+                      setDropdownColors(prev => ({
+                        ...prev,
+                        [editingColumnData.key]: {
+                          0: 'bg-yellow-500', // Pending
+                          1: 'bg-blue-500',   // In Progress
+                          2: 'bg-green-500'   // Completed
+                        },
+                        temp: {}
+                      }));
                     }
                   }
                   
@@ -3048,6 +3437,7 @@ const GridView = () => {
                   setTempDropdownOptions([]);
                   setNewDropdownValue('');
                   setNewColumnType('text');
+                  setDropdownColors(prev => ({ ...prev, temp: {} }));
                 }}
                 className="px-6 py-2"
               >
@@ -3083,20 +3473,16 @@ const GridView = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Column type</label>
-                <div className="relative">
-                  <select
-                    value={column?.type || 'text'}
-                    onChange={(e) => changeColumnType(editingColumnKey, e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none text-sm sm:text-base"
-                  >
-                    {Array.from(new Map(Object.values(columnTypeCategories).flat().map(type => [type.value, type])).values()).map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 pointer-events-none" />
-                </div>
+                <ProfessionalDropdown
+                  value={column?.type || 'text'}
+                  onChange={(value) => changeColumnType(editingColumnKey, value)}
+                  options={Array.from(new Map(Object.values(columnTypeCategories).flat().map(type => [type.value, type])).values()).map((type) => ({
+                    value: type.value,
+                    label: type.label
+                  }))}
+                  placeholder="Select column type..."
+                  size="lg"
+                />
               </div>
               {column?.type === 'dropdown' && (
                 <div className="space-y-3 sm:space-y-4">
