@@ -7,6 +7,7 @@ import 'react-date-picker/dist/DatePicker.css';
 import 'react-calendar/dist/Calendar.css';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import Toast from '../components/Toast';
 
 
 const GridView = () => {
@@ -128,6 +129,9 @@ const GridView = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [contextMenu, setContextMenu] = useState({ isOpen: false, position: { x: 0, y: 0 }, rowId: null });
+  const [contextMenuRowId, setContextMenuRowId] = useState(null);
+  const [contextMenuType, setContextMenuType] = useState('row'); // 'row' or 'cell'
+  const [contextMenuColumnKey, setContextMenuColumnKey] = useState(null);
   const [columnContextMenu, setColumnContextMenu] = useState({ isOpen: false, position: { x: 0, y: 0 }, columnKey: null });
   const [fontSize, setFontSize] = useState('16');
   const [fontFamily, setFontFamily] = useState('Arial');
@@ -176,12 +180,27 @@ const GridView = () => {
   const [dragEndCell, setDragEndCell] = useState(null);
   const [isFillDragging, setIsFillDragging] = useState(false);
   const [copiedData, setCopiedData] = useState(null);
+  const [copiedRow, setCopiedRow] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
   const [collapsedRows, setCollapsedRows] = useState(new Set());
   const [parentChildMap, setParentChildMap] = useState({});
   const [dropdownOptions, setDropdownOptions] = useState({
     status: ['Pending', 'In Progress', 'Completed']
   });
+
+  // Toast notification state
+  const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+
+  // Helper function to show toast notifications
+  const showToast = (message, type = 'success', duration = 3000) => {
+    setToast({ isVisible: true, message, type });
+    if (duration > 0) {
+      setTimeout(() => {
+        setToast(prev => ({ ...prev, isVisible: false }));
+      }, duration);
+    }
+  };
+
   const [dropdownColors, setDropdownColors] = useState({
     status: {
       0: 'bg-yellow-500', // Pending
@@ -380,7 +399,7 @@ const GridView = () => {
   const [columnOrder, setColumnOrder] = useState(allColumns.map(col => col.key));
   const [nextColumnId, setNextColumnId] = useState(allColumns.length + 1);
 
-  const [totalRows, setTotalRows] = useState(50); // Total rows including empty ones
+  const [totalRows, setTotalRows] = useState(20); // Total rows including empty ones
 
   const addNewRow = () => {
     setTotalRows(prev => prev + 1);
@@ -514,7 +533,10 @@ const GridView = () => {
     }
     
     setCopiedData({ data, isCut: false });
-    
+
+    // Clear copiedRow to avoid state conflicts
+    setCopiedRow(null);
+
     // Copy to clipboard as tab-separated values
     const textData = data.map(row => row.join('\t')).join('\n');
     navigator.clipboard.writeText(textData);
@@ -542,38 +564,235 @@ const GridView = () => {
     setRowData(newRowData);
   };
 
-  const pasteSelection = () => {
-    if (!copiedData || !selectedCell) return;
-    
-    const [startRowStr, startColKey] = selectedCell.split('-');
-    const startRow = parseInt(startRowStr);
-    const startColIndex = visibleColumns.findIndex(col => col.key === startColKey);
-    
-    if (startColIndex === -1) return;
-    
+  const pasteSelection = async () => {
+    console.log('Starting paste operation...');
+    console.log('Current state:', {
+      selectedRange,
+      selectedCell,
+      copiedData: copiedData ? { dataLength: copiedData.data?.length, isCut: copiedData.isCut } : null,
+      copiedRow: copiedRow ? Object.keys(copiedRow) : null
+    });
+
+    // Check if we have a selected range for area paste
+    if (selectedRange && copiedData?.data) {
+      console.log('Area paste: using selectedRange and copiedData');
+      return pasteAreaSelection();
+    }
+
+    // Check if we have a selected cell for single paste operations
+    if (!selectedCell) {
+      console.log('No selection found for paste operation');
+      return;
+    }
+
+    console.log('Single cell paste: trying clipboard data first');
+
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+
+      if (clipboardText && clipboardText.includes('\t')) {
+        // Handle row paste (tab-separated values)
+        console.log('Row paste: detected tab-separated data');
+        return pasteRowData(clipboardText);
+      } else if (clipboardText && clipboardText.includes('\n')) {
+        // Handle multi-line paste (area paste from external source)
+        console.log('Multi-line paste: detected area data from clipboard');
+        return pasteMultiLineData(clipboardText);
+      } else {
+        // Handle single cell paste
+        console.log('Single cell paste: detected single value');
+        return pasteSingleCell(clipboardText);
+      }
+    } catch (error) {
+      console.log('Clipboard read failed, using internal copiedData:', error);
+    }
+
+    // Fallback to internal copiedData
+    if (copiedData?.data) {
+      console.log('Fallback: using internal copiedData for area paste');
+      return pasteAreaSelection();
+    }
+
+    console.log('No data available for paste operation');
+  };
+
+  // Handle area selection paste
+  const pasteAreaSelection = () => {
+    if (!selectedRange || !copiedData?.data) {
+      console.log('Area paste failed: missing selectedRange or copiedData');
+      return;
+    }
+
+    const { startRow, startCol } = selectedRange;
+    console.log('Area paste: selectedRange =', selectedRange);
+    console.log('Area paste: copiedData.data =', copiedData.data);
+    console.log('Area paste: copiedData.data structure:', copiedData.data.map((row, i) => `Row ${i}: [${row.join(', ')}]`));
+
     const newRowData = { ...rowData };
-    
-    copiedData.data.forEach((rowValues, rowOffset) => {
+    const pasteHeight = copiedData.data.length;
+    const pasteWidth = copiedData.data[0]?.length || 0;
+
+    // Special case: single cell paste (1x1)
+    if (pasteHeight === 1 && pasteWidth === 1) {
+      console.log('Single cell paste detected, using simple paste logic');
+      const singleValue = copiedData.data[0][0];
+      const targetColKey = visibleColumns[startCol]?.key;
+
+      if (targetColKey) {
+        if (!newRowData[startRow]) {
+          newRowData[startRow] = {};
+        }
+        newRowData[startRow] = {
+          ...newRowData[startRow],
+          [targetColKey]: singleValue
+        };
+      }
+
+      setRowData(newRowData);
+
+      // Clear copied data if it was cut
+      if (copiedData.isCut) {
+        setCopiedData(null);
+      }
+
+      console.log('Single cell paste completed successfully');
+      showToast('Cell value pasted successfully!', 'success');
+      return;
+    }
+
+    // Calculate how many rows/columns we can actually paste
+    const maxPasteRows = Math.min(pasteHeight, totalRows - startRow + 1);
+    const maxPasteCols = Math.min(pasteWidth, visibleColumns.length - startCol);
+
+    console.log(`Area paste: pasting ${maxPasteRows}x${maxPasteCols} area starting at row ${startRow}, col ${startCol}`);
+    console.log('Area paste: visibleColumns =', visibleColumns.map(col => col.key));
+
+    for (let rowOffset = 0; rowOffset < maxPasteRows; rowOffset++) {
       const targetRow = startRow + rowOffset;
-      rowValues.forEach((value, colOffset) => {
-        const targetColIndex = startColIndex + colOffset;
+      const sourceRow = copiedData.data[rowOffset];
+
+      if (!sourceRow) continue;
+
+      for (let colOffset = 0; colOffset < maxPasteCols; colOffset++) {
+        const targetColIndex = startCol + colOffset;
         const targetColKey = visibleColumns[targetColIndex]?.key;
-        
-        if (targetColKey && targetRow <= totalRows) {
+
+        if (targetColKey && sourceRow[colOffset] !== undefined) {
           if (!newRowData[targetRow]) {
             newRowData[targetRow] = {};
           }
-          newRowData[targetRow] = { ...newRowData[targetRow], [targetColKey]: value };
+          newRowData[targetRow] = {
+            ...newRowData[targetRow],
+            [targetColKey]: sourceRow[colOffset]
+          };
         }
-      });
-    });
-    
+      }
+    }
+
     setRowData(newRowData);
-    
+
     // Clear copied data if it was cut
     if (copiedData.isCut) {
       setCopiedData(null);
     }
+
+    console.log('Area paste completed successfully');
+    showToast('Area pasted successfully!', 'success');
+  };
+
+  // Handle row paste (tab-separated values)
+  const pasteRowData = (clipboardText) => {
+    const [startRowStr, startColKey] = selectedCell.split('-');
+    const startRow = parseInt(startRowStr);
+    const startColIndex = visibleColumns.findIndex(col => col.key === startColKey);
+
+    if (startColIndex === -1) return;
+
+    const values = clipboardText.split('\t');
+    const newRowData = { ...rowData };
+
+    if (!newRowData[startRow]) {
+      newRowData[startRow] = {};
+    }
+
+    console.log(`Row paste: pasting ${values.length} values starting at row ${startRow}, col ${startColIndex}`);
+
+    // Paste row data starting from selected cell
+    values.forEach((value, index) => {
+      const targetColIndex = startColIndex + index;
+      const targetColKey = visibleColumns[targetColIndex]?.key;
+      if (targetColKey) {
+        newRowData[startRow][targetColKey] = value;
+      }
+    });
+
+    setRowData(newRowData);
+    console.log('Row paste completed successfully');
+    showToast('Row data pasted successfully!', 'success');
+  };
+
+  // Handle multi-line paste from external sources
+  const pasteMultiLineData = (clipboardText) => {
+    const [startRowStr, startColKey] = selectedCell.split('-');
+    const startRow = parseInt(startRowStr);
+    const startColIndex = visibleColumns.findIndex(col => col.key === startColKey);
+
+    if (startColIndex === -1) return;
+
+    const lines = clipboardText.split('\n').filter(line => line.trim());
+    const newRowData = { ...rowData };
+
+    console.log(`Multi-line paste: pasting ${lines.length} lines starting at row ${startRow}, col ${startColIndex}`);
+
+    lines.forEach((line, rowOffset) => {
+      const targetRow = startRow + rowOffset;
+      if (targetRow > totalRows) return;
+
+      const values = line.split('\t');
+
+      values.forEach((value, colOffset) => {
+        const targetColIndex = startColIndex + colOffset;
+        const targetColKey = visibleColumns[targetColIndex]?.key;
+
+        if (targetColKey) {
+          if (!newRowData[targetRow]) {
+            newRowData[targetRow] = {};
+          }
+          newRowData[targetRow] = {
+            ...newRowData[targetRow],
+            [targetColKey]: value
+          };
+        }
+      });
+    });
+
+    setRowData(newRowData);
+    console.log('Multi-line paste completed successfully');
+    showToast('Data pasted successfully!', 'success');
+  };
+
+  // Handle single cell paste
+  const pasteSingleCell = (clipboardText) => {
+    const [startRowStr, startColKey] = selectedCell.split('-');
+    const startRow = parseInt(startRowStr);
+    const startColIndex = visibleColumns.findIndex(col => col.key === startColKey);
+
+    if (startColIndex === -1) return;
+
+    const newRowData = { ...rowData };
+
+    if (!newRowData[startRow]) {
+      newRowData[startRow] = {};
+    }
+
+    newRowData[startRow] = {
+      ...newRowData[startRow],
+      [startColKey]: clipboardText
+    };
+
+    setRowData(newRowData);
+    console.log('Single cell paste completed successfully');
+    showToast('Cell value pasted successfully!', 'success');
   };
 
   useEffect(() => {
@@ -683,7 +902,7 @@ const GridView = () => {
       if (showBackgroundColorPicker && !e.target.closest('.bg-color-picker')) {
         setShowBackgroundColorPicker(false);
       }
-      if (contextMenu.isOpen) {
+      if (contextMenu.isOpen && !e.target.closest('.context-menu')) {
         setContextMenu({ ...contextMenu, isOpen: false });
       }
       if (columnContextMenu.isOpen && !e.target.closest('[data-column-menu]') && !e.target.closest('.sort-submenu')) {
@@ -1088,13 +1307,114 @@ const GridView = () => {
     );
   };
 
-  const handleContextMenu = (e, rowId) => {
+  const copyRowToClipboard = (rowId) => {
+    console.log('Copying row:', rowId, 'with data:', rowData[rowId]);
+
+    const rowToCopy = rowData[rowId];
+    if (!rowToCopy) {
+      console.warn('Row not found or empty:', rowId);
+      showToast('Row not found or empty', 'error');
+      return;
+    }
+
+    setCopiedRow({ ...rowToCopy });
+
+    // Convert row data to area format for consistency with copySelection
+    // This ensures paste logic works correctly for both area and row copies
+    const rowDataArray = [visibleColumns.map(col => rowToCopy[col.key] || '')];
+    setCopiedData({ data: rowDataArray, isCut: false });
+
+    // Copy row data to system clipboard as tab-separated values
+    const rowValues = rowDataArray[0].join('\t');
+    console.log('Row values to copy:', rowValues);
+
+    navigator.clipboard.writeText(rowValues).then(() => {
+      console.log('Row copied successfully to clipboard');
+      showToast(`Row ${rowId} copied successfully!`, 'success');
+    }).catch((err) => {
+      console.error('Failed to copy to clipboard:', err);
+      showToast('Failed to copy row to clipboard', 'error');
+    });
+  };
+
+  const pasteRow = async (targetRowId) => {
+    try {
+      // Try to get data from system clipboard first
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText && clipboardText.includes('\t')) {
+        // Parse tab-separated values
+        const values = clipboardText.split('\t');
+        const newRowData = { ...rowData };
+        const pastedRow = {};
+        
+        // Map values to columns
+        visibleColumns.forEach((col, index) => {
+          if (values[index] !== undefined) {
+            pastedRow[col.key] = values[index];
+          }
+        });
+        
+        // Update autonumber fields if they exist
+        if (pastedRow.taskId) {
+          pastedRow.taskId = targetRowId.toString();
+        }
+        
+        newRowData[targetRowId] = pastedRow;
+        setRowData(newRowData);
+        
+        saveToHistory({ 
+          type: 'paste_row', 
+          targetRow: targetRowId, 
+          data: pastedRow 
+        });
+        
+        showToast(`Row pasted to row ${targetRowId} successfully!`, 'success');
+        return;
+      }
+    } catch (error) {
+      console.log('Clipboard read failed, using internal state:', error);
+    }
+    
+    // Fallback to internal copiedRow state
+    if (!copiedRow) {
+      showToast('No row copied! Please copy a row first.', 'warning');
+      return;
+    }
+    
+    const newRowData = { ...rowData };
+    const pastedRow = { ...copiedRow };
+    
+    // Update autonumber fields if they exist
+    if (pastedRow.taskId) {
+      pastedRow.taskId = targetRowId.toString();
+    }
+    
+    newRowData[targetRowId] = pastedRow;
+    setRowData(newRowData);
+    
+    saveToHistory({ 
+      type: 'paste_row', 
+      targetRow: targetRowId, 
+      data: pastedRow 
+    });
+    
+    showToast(`Row pasted to row ${targetRowId} successfully!`, 'success');
+  };
+
+  const handleContextMenu = (e, rowId, type = 'row', columnKey = null) => {
     e.preventDefault();
+    console.log('Context menu opened:', { rowId, type, columnKey });
+
     setContextMenu({
       isOpen: true,
       position: { x: e.clientX, y: e.clientY },
-      rowId
+      rowId,
+      type, // 'row' or 'cell'
+      columnKey // only for cell type
     });
+    setContextMenuRowId(rowId);
+    setContextMenuType(type);
+    setContextMenuColumnKey(columnKey);
   };
 
   const getConditionColor = (condition) => {
@@ -1135,22 +1455,68 @@ const GridView = () => {
     });
   };
 
-  const contextMenuItems = [
-    { label: 'Cut', icon: Scissors, shortcut: '⌘ + X', onClick: () => cutSelection() },
-    { label: 'Copy', icon: Copy, shortcut: '⌘ + C', onClick: () => copySelection() },
-    { label: 'Paste', icon: Clipboard, shortcut: '⌘ + V', onClick: () => pasteSelection() },
-    { type: 'separator' },
-    { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
-    { label: 'Edit details', icon: Edit, shortcut: '⌘ + E', onClick: () => {} },
-    { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {}, danger: true },
-    { type: 'separator' },
-    { label: 'Copy row link', icon: Link, shortcut: 'Option + Shift + C', onClick: () => {} },
-    { type: 'separator' },
-    { label: 'Promote child row', icon: CornerUpLeft, shortcut: '⌘ + [', onClick: () => outdentRow(contextMenu.rowId) },
-    { label: 'Make child row', icon: CornerDownRight, shortcut: '⌘ + ]', onClick: () => indentRow(contextMenu.rowId) },
-    { type: 'separator' },
-    { label: 'Lock row', icon: Lock, shortcut: '⌘ + Shift + L', onClick: () => {} },
-  ];
+  const getContextMenuItems = () => {
+    console.log('Getting context menu items, type:', contextMenuType, 'copiedRow:', copiedRow);
+
+    if (contextMenuType === 'row') {
+      // Row context menu (from row number column)
+      return [
+        { label: 'Copy row', icon: Copy, shortcut: 'Ctrl + Shift + C', onClick: () => copyRowToClipboard(contextMenuRowId) },
+        { label: 'Paste row', icon: Clipboard, shortcut: 'Ctrl + Shift + V', onClick: () => pasteRow(contextMenuRowId), disabled: !copiedRow },
+        { type: 'separator' },
+        { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
+        { label: 'Insert row below', icon: Plus, shortcut: 'Ctrl + Shift + I', onClick: () => {} },
+        { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {}, danger: true },
+        { type: 'separator' },
+        { label: 'Copy row link', icon: Link, shortcut: 'Option + Shift + C', onClick: () => {} },
+        { type: 'separator' },
+        { label: 'Promote child row', icon: CornerUpLeft, shortcut: '⌘ + [', onClick: () => outdentRow(contextMenuRowId) },
+        { label: 'Make child row', icon: CornerDownRight, shortcut: '⌘ + ]', onClick: () => indentRow(contextMenuRowId) },
+        { type: 'separator' },
+        { label: 'Lock row', icon: Lock, shortcut: '⌘ + Shift + L', onClick: () => {} },
+      ];
+    } else {
+      // Cell context menu (from data cells)
+      return [
+        { label: 'Cut', icon: Scissors, shortcut: '⌘ + X', onClick: () => cutSelection() },
+        { label: 'Copy', icon: Copy, shortcut: '⌘ + C', onClick: () => copyCellValue() },
+        { label: 'Paste', icon: Clipboard, shortcut: '⌘ + V', onClick: () => pasteSelection() },
+        { type: 'separator' },
+        { label: 'Copy row', icon: Copy, shortcut: 'Ctrl + Shift + C', onClick: () => copyRowToClipboard(contextMenuRowId) },
+        { label: 'Paste row', icon: Clipboard, shortcut: 'Ctrl + Shift + V', onClick: () => pasteRow(contextMenuRowId), disabled: !copiedRow },
+        { type: 'separator' },
+        { label: 'Insert row above', icon: Plus, shortcut: 'Ctrl + I', onClick: () => {} },
+        { label: 'Delete row', icon: Trash2, shortcut: '⌘ + Delete', onClick: () => {}, danger: true },
+        { type: 'separator' },
+        { label: 'Promote child row', icon: CornerUpLeft, shortcut: '⌘ + [', onClick: () => outdentRow(contextMenuRowId) },
+        { label: 'Make child row', icon: CornerDownRight, shortcut: '⌘ + ]', onClick: () => indentRow(contextMenuRowId) },
+      ];
+    }
+  };
+
+  // Copy just the current cell value
+  const copyCellValue = () => {
+    if (!contextMenuColumnKey || !contextMenuRowId) return;
+
+    const cellValue = rowData[contextMenuRowId]?.[contextMenuColumnKey] || '';
+    console.log('Copying cell value:', cellValue, 'from row:', contextMenuRowId, 'column:', contextMenuColumnKey);
+
+    // Set single cell data for paste operations
+    const singleCellData = [[cellValue]];
+    setCopiedData({ data: singleCellData, isCut: false });
+
+    // Clear row-specific state to avoid conflicts
+    setCopiedRow(null);
+
+    // Also set to clipboard
+    navigator.clipboard.writeText(cellValue).then(() => {
+      console.log('Cell value copied to clipboard successfully');
+      showToast('Cell value copied successfully!', 'success');
+    }).catch((err) => {
+      console.error('Failed to copy cell to clipboard:', err);
+      showToast('Failed to copy cell value', 'error');
+    });
+  };
 
   const columnContextMenuItems = [
     { label: 'Insert column left', icon: Plus, shortcut: 'Ctrl + Shift + I', onClick: () => insertColumnLeft(columnContextMenu.columnKey) },
@@ -1554,7 +1920,7 @@ const GridView = () => {
                   className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
                     selectedRows.includes(row.rowNumber) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
-                  onContextMenu={(e) => handleContextMenu(e, row.rowNumber)}
+                  onContextMenu={(e) => handleContextMenu(e, row.rowNumber, 'row')}
                   style={{ height: rowHeights[row.rowNumber] || '31px' }}
                 >
                   <td className="p-0 border-r border-b border-gray-200 text-center bg-white group relative">
@@ -1564,11 +1930,13 @@ const GridView = () => {
                       </div>
                       <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                          className={`p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors ${
+                            copiedRow ? 'bg-green-100 text-green-600' : ''
+                          }`}
                           title="Copy row"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Copy row functionality
+                            copyRowToClipboard(row.rowNumber);
                           }}
                         >
                           <Copy className="w-3 h-3 text-gray-500" />
@@ -1727,7 +2095,6 @@ const GridView = () => {
                   className={`hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
                     selectedRows.includes(row.rowNumber) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
-                  onContextMenu={(e) => handleContextMenu(e, row.rowNumber)}
                   style={{ height: rowHeights[row.rowNumber] || '31px' }}
                 >
                   {visibleColumns.map((column) => (
@@ -1840,6 +2207,7 @@ const GridView = () => {
                           setIsFillDragging(false);
                         }
                       }}
+                      onContextMenu={(e) => handleContextMenu(e, row.rowNumber, 'cell', column.key)}
                       onDoubleClick={() => {
                         const cellKey = `${row.rowNumber}-${column.key}`;
                         if (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment' || column.type === 'date') {
@@ -2086,47 +2454,52 @@ const GridView = () => {
         </div>
       </div>
 
-      {contextMenu.isOpen && (
-        <div 
-          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl py-2 z-[9999] min-w-[280px]"
-          style={{ 
-            left: contextMenu.position.x, 
-            top: contextMenu.position.y 
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenuItems.map((item, index) => {
-            if (item.type === 'separator') {
-              return <div key={index} className="h-px bg-gray-200 dark:bg-gray-600 my-2" />;
-            }
-            return (
-              <button
-                key={index}
-                className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors ${
-                  item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'
-                } ${
-                  item.disabled ? 'opacity-40 cursor-not-allowed text-gray-400' : ''
-                }`}
-                onClick={() => {
-                  if (!item.disabled) {
-                    item.onClick();
-                    setContextMenu({ ...contextMenu, isOpen: false });
-                  }
-                }}
-                disabled={item.disabled}
-              >
-                <div className="flex items-center space-x-3">
-                  {item.icon && <item.icon className="w-4 h-4" />}
-                  <span className="font-medium">{item.label}</span>
-                </div>
-                {item.shortcut && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{item.shortcut}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {contextMenu.isOpen && (() => {
+        const menuItems = getContextMenuItems();
+        console.log('Context menu items:', menuItems);
+        console.log('Copied row state:', copiedRow);
+        return (
+          <div
+            className="fixed context-menu bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl py-2 z-[9999] min-w-[280px]"
+            style={{
+              left: contextMenu.position.x,
+              top: contextMenu.position.y
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {menuItems.map((item, index) => {
+              if (item.type === 'separator') {
+                return <div key={index} className="h-px bg-gray-200 dark:bg-gray-600 my-2" />;
+              }
+              return (
+                <button
+                  key={index}
+                  className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between transition-colors ${
+                    item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'
+                  } ${
+                    item.disabled ? 'opacity-40 cursor-not-allowed text-gray-400' : ''
+                  }`}
+                  onClick={() => {
+                    if (!item.disabled) {
+                      item.onClick();
+                      setContextMenu({ ...contextMenu, isOpen: false });
+                    }
+                  }}
+                  disabled={item.disabled}
+                >
+                  <div className="flex items-center space-x-3">
+                    {item.icon && <item.icon className="w-4 h-4" />}
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {item.shortcut && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{item.shortcut}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {columnContextMenu.isOpen && (
         <>
@@ -2891,6 +3264,14 @@ const GridView = () => {
           );
         })()}
       </Modal>
+
+      {/* Toast Notification */}
+      <Toast
+        isVisible={toast.isVisible}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+      />
       </motion.div>
     </div>
   );
