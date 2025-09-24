@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { ChevronDown, Filter, Search, Plus, MoreHorizontal, Star, Copy, Trash2, Edit, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings, Download, Share2, Scissors, Clipboard, FileText, RotateCcw, Undo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, DollarSign, Percent, Hash, Quote, Lock, HelpCircle, Cloud, Minus, MessageCircle, Paperclip, Eye, EyeOff, GripVertical, Palette, Indent, Outdent, Calendar, Link, CornerDownRight, CornerUpLeft, MoreVertical, MoreVerticalIcon } from 'lucide-react';
+import { ChevronDown, Filter, Search, Plus, MoreHorizontal, Star, Copy, Trash2, Edit, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings, Download, Share2, Scissors, Clipboard, FileText, RotateCcw, Undo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, DollarSign, Percent, Hash, Quote, Lock, HelpCircle, Cloud, Minus, MessageCircle, Paperclip, Eye, EyeOff, GripVertical, Palette, Indent, Outdent, Calendar, Link, CornerDownRight, CornerUpLeft, MoreVertical, MoreVerticalIcon, Grid3X3 } from 'lucide-react';
 import DatePicker from 'react-date-picker';
 import 'react-date-picker/dist/DatePicker.css';
 import 'react-calendar/dist/Calendar.css';
@@ -9,6 +9,8 @@ import Button from '../components/Button';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 import ProfessionalDropdown from '../components/ProfessionalDropdown';
+import ConditionalFormattingModal from '../components/ConditionalFormattingModal';
+import { getCellFormatting, formatToCSSStyles } from '../utils/conditionalFormatting';
 
 
 const GridView = () => {
@@ -155,6 +157,8 @@ const GridView = () => {
   const [newColumnType, setNewColumnType] = useState('text');
   const [showColumnFilter, setShowColumnFilter] = useState(false);
   const [filterPosition, setFilterPosition] = useState({ x: 0, y: 0 });
+  const [showConditionalFormatting, setShowConditionalFormatting] = useState(false);
+  const [conditionalFormattingRules, setConditionalFormattingRules] = useState([]);
   const [filterColumnKey, setFilterColumnKey] = useState(null);
   const [showSortSubmenu, setShowSortSubmenu] = useState(false);
   const [sortSubmenuPosition, setSortSubmenuPosition] = useState({ x: 0, y: 0 });
@@ -1493,7 +1497,15 @@ const GridView = () => {
 
   const getCellStyle = (rowId, columnKey) => {
     const cellKey = `${rowId}-${columnKey}`;
-    return cellStyles[cellKey] || {};
+    const manualStyles = cellStyles[cellKey] || {};
+    
+    // Get conditional formatting styles
+    const row = rowData[rowId];
+    const conditionalStyles = row ? getCellFormatting(row, columnKey, conditionalFormattingRules) : null;
+    const conditionalCSSStyles = conditionalStyles ? formatToCSSStyles(conditionalStyles) : {};
+    
+    // Manual styles override conditional formatting styles
+    return { ...conditionalCSSStyles, ...manualStyles };
   };
 
   const isInDragSelection = (rowNumber, columnKey) => {
@@ -2164,6 +2176,21 @@ const GridView = () => {
           <Button variant="ghost" size="sm" className="p-1">
             <Quote className="w-4 h-4" />
           </Button>
+        </div>
+        <div className="flex items-center space-x-1">
+          <div className="relative group">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700" 
+              onClick={() => setShowConditionalFormatting(true)}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </Button>
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+              Conditional Formatting
+            </div>
+          </div>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setShowColumnModal(true)}>
           <Eye className="w-4 h-4 mr-2" />
@@ -3650,6 +3677,16 @@ const GridView = () => {
           );
         })()}
       </Modal>
+
+      {/* Conditional Formatting Modal */}
+      <ConditionalFormattingModal
+        isOpen={showConditionalFormatting}
+        onClose={() => setShowConditionalFormatting(false)}
+        columns={visibleColumns}
+        onSaveRules={setConditionalFormattingRules}
+        existingRules={conditionalFormattingRules}
+        rowData={rowData}
+      />
 
       {/* Toast Notification */}
       <Toast
