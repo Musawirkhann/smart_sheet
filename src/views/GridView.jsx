@@ -1123,7 +1123,25 @@ const GridView = () => {
           case 'Delete':
           case 'Backspace':
             e.preventDefault();
-            deleteRow(currentRowIndex);
+            // Row deletion is now only available through context menu
+            // Clear cell content instead of deleting the entire row
+            if (selectedCell && rowData[currentRowIndex]) {
+              const newRowData = { ...rowData };
+              if (newRowData[currentRowIndex][colKey] !== undefined) {
+                const oldValue = newRowData[currentRowIndex][colKey];
+                newRowData[currentRowIndex][colKey] = '';
+                setRowData(newRowData);
+                
+                // Save to history for undo functionality
+                saveToHistory({
+                  type: 'cell_edit',
+                  rowId: currentRowIndex,
+                  columnKey: colKey,
+                  oldValue,
+                  newValue: ''
+                });
+              }
+            }
             break;
         }
         
