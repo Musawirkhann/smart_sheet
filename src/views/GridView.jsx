@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { ChevronDown, Filter, Search, Plus, MoreHorizontal, Star, Copy, Trash2, Edit, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Settings, Download, Share2, Scissors, Clipboard, FileText, RotateCcw, Undo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, AlignJustify, DollarSign, Percent, Hash, Quote, Lock, HelpCircle, Cloud, Minus, MessageCircle, Paperclip, Eye, EyeOff, GripVertical, Palette, Indent, Outdent, Calendar, Link, CornerDownRight, CornerUpLeft, MoreVertical, MoreVerticalIcon, Grid3X3 } from 'lucide-react';
@@ -10,7 +10,16 @@ import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 import ProfessionalDropdown from '../components/ProfessionalDropdown';
 import ConditionalFormattingModal from '../components/ConditionalFormattingModal';
+import ProjectSettings from '../components/ProjectSettings';
+import PredecessorsInput from '../components/PredecessorsInput';
 import { getCellFormatting, formatToCSSStyles } from '../utils/conditionalFormatting';
+import { 
+  recalculateProjectDates, 
+  calculateWorkingDays,
+  detectCircularDependencies,
+  calculateEndDateFromDuration,
+  calculateStartDateFromDuration
+} from '../utils/dependencies';
 
 
 const GridView = () => {
@@ -116,14 +125,64 @@ const GridView = () => {
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
-  }, []);
-  const [rowData, setRowData] = useState({
-    1: { taskId: '1', taskName: 'Project Kickoff', dependencies: 'None', assignedTo: 'emily-davis', condition: 'green', startDate: '2024-09-03', endDate: '2024-09-05', status: 'Pending' },
-    2: { taskId: '2', taskName: 'Design Phase', dependencies: '1', assignedTo: 'john-doe', condition: 'red', startDate: '2024-09-10', endDate: '2024-09-20', status: 'In Progress' },
-    3: { taskId: '3', taskName: 'Development', dependencies: '2', assignedTo: 'mike-johnson', condition: 'yellow', startDate: '2024-09-17', endDate: '2024-10-10', status: 'In Progress' },
-    4: { taskId: '4', taskName: 'Testing Phase', dependencies: '3', assignedTo: 'chris-lee', condition: 'yellow', startDate: '2024-10-01', endDate: '2024-10-15', status: 'Pending' },
-    5: { taskId: '5', taskName: 'Deployment', dependencies: '4', assignedTo: 'chris-lee', condition: 'red', startDate: '2024-10-15', endDate: '2024-10-25', status: 'Completed' },
-  });
+    }, []);
+    const [rowData, setRowData] = useState({
+     1: { 
+       taskId: '1', 
+       taskName: 'Project Kickoff', 
+       assignedTo: 'emily-davis', 
+       condition: 'green', 
+       startDate: '2024-09-03', 
+       endDate: '2024-09-05', 
+       status: 'Pending',
+       duration: '3',
+       rowNumber: 1
+     },
+     2: { 
+       taskId: '2', 
+       taskName: 'Design Phase', 
+       assignedTo: 'john-doe', 
+       condition: 'red', 
+       startDate: '2024-09-10', 
+       endDate: '2024-09-20', 
+       status: 'In Progress',
+       duration: '8',
+       rowNumber: 2
+     },
+     3: { 
+       taskId: '3', 
+       taskName: 'Development', 
+       assignedTo: 'mike-johnson', 
+       condition: 'yellow', 
+       startDate: '2024-09-23', 
+       endDate: '2024-10-15', 
+       status: 'In Progress',
+       duration: '15',
+       rowNumber: 3
+     },
+     4: { 
+       taskId: '4', 
+       taskName: 'Testing Phase', 
+       assignedTo: 'chris-lee', 
+       condition: 'yellow', 
+       startDate: '2024-10-16', 
+       endDate: '2024-10-29', 
+       status: 'Pending',
+       duration: '10',
+       rowNumber: 4
+     },
+     5: { 
+       taskId: '5', 
+       taskName: 'Deployment', 
+       assignedTo: 'chris-lee', 
+       condition: 'red', 
+       startDate: '2024-10-30', 
+       endDate: '2024-11-07', 
+       status: 'Completed',
+       duration: '5',
+       rowNumber: 5
+     },
+    });
 
   const [editingCell, setEditingCell] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -201,8 +260,28 @@ const GridView = () => {
     ]
   });
 
-  // Toast notification state
-  const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+    // Toast notification state
+    const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+ 
+   // Project Settings state
+   const [showProjectSettings, setShowProjectSettings] = useState(false);
+   const [projectSettings, setProjectSettings] = useState({
+     dateRange: {
+       startDateColumn: 'startDate',
+       endDateColumn: 'endDate'
+     },
+    dependencies: {
+      enabled: true, // Enable by default for immediate functionality
+      predecessorsColumn: 'predecessors',
+      durationColumn: 'duration'
+    },
+     workingDays: {
+       fiscalYearStart: 'January',
+       weekStart: 'Sunday',
+       workingDays: ['M', 'T', 'W', 'R', 'F'],
+       dayLength: 8
+     }
+   });
 
   // Helper function to show toast notifications
   const showToast = (message, type = 'success', duration = 3000) => {
@@ -212,6 +291,183 @@ const GridView = () => {
         setToast(prev => ({ ...prev, isVisible: false }));
       }, duration);
     }
+  };
+ 
+   // Project Settings handlers
+   const handleProjectSettingsChange = (newSettings) => {
+     // Validate settings and show warnings
+     const warnings = [];
+     
+     if (newSettings.dependencies.enabled) {
+       // Check if required columns are selected
+       if (!newSettings.dependencies.predecessorsColumn) {
+         warnings.push('Dependencies enabled but no Predecessors column selected');
+       }
+       
+       if (!newSettings.dependencies.durationColumn) {
+         warnings.push('Dependencies enabled but no Duration column selected');
+       }
+       
+       // Check if selected columns exist
+       const predecessorsCol = allColumns.find(col => col.key === newSettings.dependencies.predecessorsColumn);
+       const durationCol = allColumns.find(col => col.key === newSettings.dependencies.durationColumn);
+       
+       if (newSettings.dependencies.predecessorsColumn && !predecessorsCol) {
+         warnings.push(`Predecessors column "${newSettings.dependencies.predecessorsColumn}" not found`);
+       }
+       
+       if (newSettings.dependencies.durationColumn && !durationCol) {
+         warnings.push(`Duration column "${newSettings.dependencies.durationColumn}" not found`);
+       }
+       
+       // Check if columns have correct type
+       if (predecessorsCol && predecessorsCol.type !== 'text' && predecessorsCol.type !== 'predecessors') {
+         warnings.push('Predecessors column should be a Text or Predecessors column type');
+       }
+       
+       if (durationCol && durationCol.type !== 'text' && durationCol.type !== 'number' && durationCol.type !== 'duration') {
+         warnings.push('Duration column should be a Text, Number, or Duration column type');
+       }
+     }
+     
+     // Check date range columns
+     if (!newSettings.dateRange.startDateColumn || !newSettings.dateRange.endDateColumn) {
+       warnings.push('Start Date and End Date columns must be selected');
+     }
+     
+     const startDateCol = allColumns.find(col => col.key === newSettings.dateRange.startDateColumn);
+     const endDateCol = allColumns.find(col => col.key === newSettings.dateRange.endDateColumn);
+     
+     if (!startDateCol || startDateCol.type !== 'date') {
+       warnings.push('Start Date column must be a Date column type');
+     }
+     
+     if (!endDateCol || endDateCol.type !== 'date') {
+       warnings.push('End Date column must be a Date column type');
+     }
+     
+     // Show warnings to user
+     if (warnings.length > 0) {
+       showToast(`Settings applied with warnings: ${warnings.join('; ')}`, 'warning', 6000);
+     } else {
+       showToast('Project settings updated successfully', 'success');
+     }
+     
+     setProjectSettings(newSettings);
+     
+     // Update columns based on new settings
+     const newColumns = getDynamicColumns();
+     setAllColumns(newColumns);
+     setColumnOrder(newColumns.map(col => col.key));
+     
+     // Only recalculate dates if dependencies are properly configured
+     if (newSettings.dependencies.enabled && 
+         newSettings.dependencies.predecessorsColumn && 
+         newSettings.dependencies.durationColumn &&
+         warnings.length === 0) {
+       recalculateAllTaskDates();
+     } else if (newSettings.dependencies.enabled && warnings.length > 0) {
+       showToast('Dependencies not fully configured - automatic date calculation disabled', 'info');
+     }
+   };
+ 
+  // Dependency calculation functions
+  const recalculateAllTaskDates = () => {
+    try {
+      console.log('🔧 recalculateAllTaskDates called');
+      console.log('🔧 Current rowData:', rowData);
+      console.log('🔧 Project settings:', projectSettings);
+      
+      const columnConfig = {
+        predecessorsColumn: projectSettings.dependencies.predecessorsColumn,
+        startDateColumn: projectSettings.dateRange.startDateColumn,
+        endDateColumn: projectSettings.dateRange.endDateColumn,
+        durationColumn: projectSettings.dependencies.durationColumn
+      };
+      
+      console.log('🔧 Column config:', columnConfig);
+      console.log('🔧 Working days:', projectSettings.workingDays.workingDays);
+      
+      const result = recalculateProjectDates(rowData, projectSettings.workingDays.workingDays, columnConfig);
+      
+      console.log('🔧 Calculation result:', result);
+      
+      if (result.cycles && result.cycles.length > 0) {
+        showToast(`Circular dependencies detected in tasks: ${result.cycles.flat().join(', ')}`, 'error');
+        return;
+      }
+      
+      console.log('🔧 Setting new row data:', result.tasks);
+      setRowData(result.tasks);
+      showToast('Task dates recalculated based on dependencies', 'success');
+    } catch (error) {
+      console.error('🔧 Error recalculating dates:', error);
+      showToast(`Error recalculating task dates: ${error.message}`, 'error');
+    }
+  };
+ 
+ 
+   const getRowDuration = (row) => {
+     const startDateColumn = projectSettings.dateRange.startDateColumn;
+     const endDateColumn = projectSettings.dateRange.endDateColumn;
+     const durationColumn = projectSettings.dependencies.durationColumn;
+     
+     // Use explicit duration if available
+     if (row[durationColumn] && !isNaN(parseInt(row[durationColumn]))) {
+       return parseInt(row[durationColumn]);
+     }
+     
+     // Calculate from start and end dates
+     if (row[startDateColumn] && row[endDateColumn]) {
+       const start = new Date(row[startDateColumn]);
+       const end = new Date(row[endDateColumn]);
+       const diffTime = end.getTime() - start.getTime();
+       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+       return diffDays;
+     }
+     
+     return 1; // Default to 1 day
+   };
+ 
+  const handlePredecessorChange = (rowId, predecessorValue, columnKey = 'predecessors') => {
+    console.log('🔧 handlePredecessorChange called:', { rowId, predecessorValue, columnKey });
+    console.log('🔧 Dependencies enabled:', projectSettings.dependencies.enabled);
+    console.log('🔧 Current rowData before change:', rowData[rowId]);
+    
+    const newRowData = { ...rowData };
+    // Use the actual column key instead of the setting
+    newRowData[rowId] = { ...newRowData[rowId], [columnKey]: predecessorValue };
+    
+    console.log('🔧 Updated rowData for task:', newRowData[rowId]);
+    
+    // Validate predecessors
+    const columnConfig = {
+      predecessorsColumn: projectSettings.dependencies.predecessorsColumn,
+      startDateColumn: projectSettings.dateRange.startDateColumn,
+      endDateColumn: projectSettings.dateRange.endDateColumn,
+      durationColumn: projectSettings.dependencies.durationColumn
+    };
+    
+    console.log('🔧 Column config:', columnConfig);
+    
+    const hasCircularDep = detectCircularDependencies(newRowData, columnConfig);
+    
+    if (hasCircularDep.length > 0) {
+      showToast('Circular dependency detected! Please check your predecessor relationships.', 'error');
+      return;
+    }
+    
+    setRowData(newRowData);
+    
+    console.log('🔧 Row data updated, waiting for onBlur to trigger date recalculation');
+    
+    saveToHistory({
+      type: 'cell_edit',
+      rowId,
+      columnKey: columnKey,
+      oldValue: rowData[rowId]?.[columnKey] || '',
+      newValue: predecessorValue
+    });
   };
 
   const [dropdownColors, setDropdownColors] = useState({
@@ -420,18 +676,86 @@ const GridView = () => {
     }
   };
 
-  const [allColumns, setAllColumns] = useState([
-    { key: 'taskId', label: 'Task ID', width: '80px', type: 'text' },
-    { key: 'taskName', label: 'Task Name', width: '200px', type: 'text' },
-    { key: 'dependencies', label: 'Dependencies', width: '120px', type: 'text' },
-    { key: 'assignedTo', label: 'Assigned To', width: '150px', type: 'contact' },
-    { key: 'condition', label: 'Condition', width: '100px', type: 'condition' },
-    { key: 'startDate', label: 'Start Date', width: '120px', type: 'date' },
-    { key: 'endDate', label: 'End Date', width: '120px', type: 'date' },
-    { key: 'status', label: 'Status', width: '120px', type: 'status' },
-  ]);
+   // Base columns definition
+   const getBaseColumns = () => [
+     { key: 'taskId', label: 'Task ID', width: '80px', type: 'text', isSystem: true, canDelete: false },
+     { key: 'taskName', label: 'Task Name', width: '200px', type: 'text', isSystem: false, canDelete: true },
+     { key: 'assignedTo', label: 'Assigned To', width: '150px', type: 'contact', isSystem: false, canDelete: true },
+     { key: 'condition', label: 'Condition', width: '100px', type: 'condition', isSystem: false, canDelete: true },
+     { key: 'startDate', label: 'Start Date', width: '120px', type: 'date', isSystem: true, canDelete: false },
+     { key: 'endDate', label: 'End Date', width: '120px', type: 'date', isSystem: true, canDelete: false },
+     { key: 'status', label: 'Status', width: '120px', type: 'status', isSystem: false, canDelete: true },
+   ];
+ 
+   // Dynamic columns based on project settings
+   const getDynamicColumns = useCallback(() => {
+     const baseColumns = getBaseColumns();
+     let dynamicColumns = [...baseColumns];
 
-  const [columnOrder, setColumnOrder] = useState(allColumns.map(col => col.key));
+     // Add system Predecessors column when dependencies are enabled
+     if (projectSettings.dependencies.enabled) {
+       const predecessorsColumn = {
+         key: 'predecessors',
+         label: 'Predecessors',
+         width: '150px',
+         type: 'predecessors',
+         isSystem: true,
+         canDelete: false,
+         isPredecessorsColumn: true
+       };
+       
+       // Check if predecessors column already exists
+       const existingIndex = dynamicColumns.findIndex(col => col.key === 'predecessors');
+       if (existingIndex === -1) {
+         // Insert after taskName
+         const taskNameIndex = dynamicColumns.findIndex(col => col.key === 'taskName');
+         dynamicColumns.splice(taskNameIndex + 1, 0, predecessorsColumn);
+       } else {
+         // Update existing column
+         dynamicColumns[existingIndex] = { ...dynamicColumns[existingIndex], ...predecessorsColumn };
+       }
+     }
+
+     // Add system Duration column when dependencies are enabled
+     if (projectSettings.dependencies.enabled) {
+       const durationColumn = {
+         key: 'duration',
+         label: 'Duration',
+         width: '100px',
+         type: 'duration',
+         isSystem: true,
+         canDelete: false,
+         isDurationColumn: true
+       };
+       
+       // Check if duration column already exists
+       const existingIndex = dynamicColumns.findIndex(col => col.key === 'duration');
+       if (existingIndex === -1) {
+         // Insert before startDate
+         const startDateIndex = dynamicColumns.findIndex(col => col.key === projectSettings.dateRange.startDateColumn);
+         dynamicColumns.splice(startDateIndex, 0, durationColumn);
+       } else {
+         // Update existing column
+         dynamicColumns[existingIndex] = { ...dynamicColumns[existingIndex], ...durationColumn };
+       }
+     }
+
+     return dynamicColumns;
+   }, [
+     projectSettings.dependencies.enabled,
+     projectSettings.dateRange.startDateColumn
+   ]);
+ 
+   const [allColumns, setAllColumns] = useState(() => getDynamicColumns());
+ 
+   const [columnOrder, setColumnOrder] = useState(() => getDynamicColumns().map(col => col.key));
+ 
+   // Update columns when project settings change
+   useEffect(() => {
+     const newColumns = getDynamicColumns();
+     setAllColumns(newColumns);
+     setColumnOrder(newColumns.map(col => col.key));
+   }, [getDynamicColumns]);
   const [nextColumnId, setNextColumnId] = useState(allColumns.length + 1);
 
   const [totalRows, setTotalRows] = useState(20); // Total rows including empty ones
@@ -1062,9 +1386,9 @@ const GridView = () => {
         const currentColIndex = visibleColumns.findIndex(col => col.key === colKey);
         const column = visibleColumns[currentColIndex];
         
-        // Check if it's a printable character (typing)
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          if (column && (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment')) {
+          // Check if it's a printable character (typing)
+          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (column && (column.type === 'text' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment' || column.type === 'predecessors' || column.type === 'duration' || column.isPredecessorsColumn || column.isDurationColumn)) {
             e.preventDefault();
             setEditingCell(selectedCell);
             setIsTyping(true);
@@ -1195,12 +1519,103 @@ const GridView = () => {
   };
 
   const handleCellEdit = (rowNumber, column, value) => {
+    console.log('🔧 handleCellEdit:', { rowNumber, column, value });
+    
     saveToHistory({ type: 'cell_edit', rowNumber, column, oldValue: rowData[rowNumber]?.[column], newValue: value });
-    setRowData(prev => ({
-      ...prev,
-      [rowNumber]: { ...prev[rowNumber], [column]: value }
-    }));
+    
+    // Update the row data first
+    const updatedRowData = {
+      ...rowData,
+      [rowNumber]: { ...rowData[rowNumber], [column]: value }
+    };
+    
+    // Simple, loosely coupled approach - detect column types by content and behavior
+    const currentRow = updatedRowData[rowNumber];
+    let needsRecalculation = false;
+    
+    // Auto-detect if this is a date column (contains date-like value)
+    const isDateColumn = value && (
+      /^\d{4}-\d{2}-\d{2}$/.test(value) || // YYYY-MM-DD format
+      !isNaN(Date.parse(value)) // Any parseable date
+    );
+    
+    // Auto-detect if this is a duration column (numeric value)
+    const isDurationColumn = value && !isNaN(parseInt(value)) && parseInt(value) > 0;
+    
+    console.log('🔧 Auto-detected column types:', {
+      column,
+      value,
+      isDateColumn,
+      isDurationColumn,
+      dependenciesEnabled: projectSettings.dependencies?.enabled
+    });
+    
+    // If dependencies are enabled, handle smart recalculation
+    if (projectSettings.dependencies?.enabled) {
+      // Find start date, end date, and duration columns dynamically
+      const possibleStartColumns = ['startDate', 'start', 'startdate', 'start_date'];
+      const possibleEndColumns = ['endDate', 'end', 'enddate', 'end_date', 'finish', 'finishDate'];
+      const possibleDurationColumns = ['duration', 'days', 'length'];
+      
+      const startDateCol = possibleStartColumns.find(col => currentRow[col]);
+      const endDateCol = possibleEndColumns.find(col => currentRow[col]);
+      const durationCol = possibleDurationColumns.find(col => currentRow[col]);
+      
+      console.log('🔧 Found columns:', { startDateCol, endDateCol, durationCol });
+      
+      // If this is a duration change and we have a start date, recalculate end date
+      if (isDurationColumn && startDateCol && currentRow[startDateCol]) {
+        const startDate = new Date(currentRow[startDateCol]);
+        const duration = parseInt(value) || 1;
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + duration - 1);
+        
+        if (endDateCol) {
+          updatedRowData[rowNumber][endDateCol] = endDate.toISOString().split('T')[0];
+          console.log('🔧 Recalculated end date from duration:', updatedRowData[rowNumber][endDateCol]);
+          needsRecalculation = true;
+        }
+      }
+      
+      // If this is a start date change and we have duration, recalculate end date
+      if (isDateColumn && startDateCol && column === startDateCol && durationCol && currentRow[durationCol]) {
+        const startDate = new Date(value);
+        const duration = parseInt(currentRow[durationCol]) || 1;
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + duration - 1);
+        
+        if (endDateCol) {
+          updatedRowData[rowNumber][endDateCol] = endDate.toISOString().split('T')[0];
+          console.log('🔧 Recalculated end date from start date:', updatedRowData[rowNumber][endDateCol]);
+          needsRecalculation = true;
+        }
+      }
+      
+      // If this is an end date change, recalculate duration
+      if (isDateColumn && endDateCol && column === endDateCol && startDateCol && currentRow[startDateCol]) {
+        const startDate = new Date(currentRow[startDateCol]);
+        const endDate = new Date(value);
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        if (durationCol && duration > 0) {
+          updatedRowData[rowNumber][durationCol] = duration;
+          console.log('🔧 Recalculated duration from end date:', duration);
+          needsRecalculation = true;
+        }
+      }
+    }
+    
+    setRowData(updatedRowData);
     setEditingCell(null);
+    
+    // Trigger project-wide recalculation if needed
+    if (projectSettings.dependencies?.enabled && (isDateColumn || isDurationColumn || needsRecalculation)) {
+      console.log('🔧 Triggering project-wide recalculation due to date/duration change');
+      setTimeout(() => {
+        recalculateAllTaskDates();
+      }, 100);
+    }
   };
 
   const updateEditorState = (cellKey) => {
@@ -1444,11 +1859,20 @@ const GridView = () => {
   };
 
   const deleteColumn = (columnKey) => {
-    setAllColumns(prev => prev.filter(col => col.key !== columnKey));
-    setColumnOrder(prev => prev.filter(key => key !== columnKey));
-    setHiddenColumns(prev => prev.filter(key => key !== columnKey));
-    setFrozenColumns(prev => prev.filter(key => key !== columnKey));
-  };
+     // Check if column is a system column that cannot be deleted
+     const column = allColumns.find(col => col.key === columnKey);
+     if (column && column.isSystem && column.canDelete === false) {
+       showToast(`Cannot delete system column: ${column.label}`, 'error');
+       return;
+     }
+ 
+     setAllColumns(prev => prev.filter(col => col.key !== columnKey));
+     setColumnOrder(prev => prev.filter(key => key !== columnKey));
+     setHiddenColumns(prev => prev.filter(key => key !== columnKey));
+     setFrozenColumns(prev => prev.filter(key => key !== columnKey));
+     
+     showToast(`Column "${column?.label || columnKey}" deleted successfully`, 'success');
+   };
 
   const toggleColumnFreeze = (columnKey) => {
     setFrozenColumns(prev => {
@@ -1828,9 +2252,14 @@ const GridView = () => {
         setDropdownColors(prev => ({ ...prev, temp: existingColors }));
       }
       setNewDropdownValue('');
-      setShowAddColumnModal(true);
-    } },
-    { label: 'Delete column', icon: Trash2, shortcut: '⌘ + Shift + Delete', onClick: () => deleteColumn(columnContextMenu.columnKey), danger: true },
+        setShowAddColumnModal(true);
+      } },
+     ...((() => {
+       const column = allColumns.find(col => col.key === columnContextMenu.columnKey);
+       return (column && column.isSystem && column.canDelete === false) ? [] : [
+         { label: 'Delete column', icon: Trash2, shortcut: '⌘ + Shift + Delete', onClick: () => deleteColumn(columnContextMenu.columnKey), danger: true }
+       ];
+     })()),
     { label: 'Filter', icon: Filter, onClick: (e) => {
       const rect = e?.target?.getBoundingClientRect() || { left: columnContextMenu.position.x, bottom: columnContextMenu.position.y };
       setFilterPosition({ x: rect.left - 200, y: rect.bottom + 10 });
@@ -1957,9 +2386,13 @@ const GridView = () => {
             </button>
           </div>
         </div>
-        <button className="p-1 text-gray-600 hover:bg-gray-100 rounded">
-          <Settings className="w-4 h-4" />
-        </button>
+         <button 
+           className="p-1 text-gray-600 hover:bg-gray-100 rounded"
+           onClick={() => setShowProjectSettings(true)}
+           title="Project Settings"
+         >
+           <Settings className="w-4 h-4" />
+         </button>
       </div>
 
       {/* Formatting Toolbar */}
@@ -2530,15 +2963,15 @@ const GridView = () => {
                         }
                       }}
                       onContextMenu={(e) => handleContextMenu(e, row.rowNumber, 'cell', column.key)}
-                      onDoubleClick={() => {
-                        const cellKey = `${row.rowNumber}-${column.key}`;
-                        if (column.type === 'text' || column.type === 'autonumber' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment' || column.type === 'date') {
-                          setEditingCell(cellKey);
-                          setIsTyping(false);
-                        }
-                      }}
+                        onDoubleClick={() => {
+                          const cellKey = `${row.rowNumber}-${column.key}`;
+                          if (column.type === 'text' || column.type === 'createdby' || column.type === 'modifiedby' || column.type === 'comment' || column.type === 'date' || column.type === 'predecessors' || column.type === 'duration' || column.isPredecessorsColumn || column.isDurationColumn) {
+                            setEditingCell(cellKey);
+                            setIsTyping(false);
+                          }
+                        }}
                     >
-                      {editingCell === `${row.rowNumber}-${column.key}` && column.type !== 'date' ? (
+                       {editingCell === `${row.rowNumber}-${column.key}` && column.type !== 'date' && column.type !== 'predecessors' && !column.isPredecessorsColumn ? (
                         <input
                           type="text"
                           data-cell={`${row.rowNumber}-${column.key}`}
@@ -2699,8 +3132,46 @@ const GridView = () => {
                             <div className="flex justify-center">
                               <div className={`w-4 h-4 rounded-full ${getConditionColor(row[column.key])}`}></div>
                             </div>
-                          ) : column.type === 'autonumber' ? (
-                            <span className="text-gray-600">#{row.rowNumber}</span>
+                           ) : (column.type === 'predecessors' || column.isPredecessorsColumn) ? (
+                             <div className="relative group">
+                               {editingCell === `${row.rowNumber}-${column.key}` ? (
+                                 <PredecessorsInput
+                                   value={row[column.key] || ''}
+                                   onChange={(value) => handlePredecessorChange(row.rowNumber, value, column.key)}
+                                   onBlur={() => {
+                                     console.log('🔧 PredecessorsInput onBlur triggered');
+                                     setEditingCell(null);
+                                     // Trigger date recalculation after editing is complete
+                                     if (projectSettings.dependencies.enabled) {
+                                       setTimeout(() => recalculateAllTaskDates(), 200);
+                                     }
+                                   }}
+                                   allTasks={rowData}
+                                   currentTaskId={row.rowNumber}
+                                   className="w-full"
+                                 />
+                               ) : (
+                                 <div 
+                                   className="text-sm px-2 py-1 min-h-[24px] flex items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
+                                   onClick={() => setEditingCell(`${row.rowNumber}-${column.key}`)}
+                                   onMouseEnter={() => {
+                                     // Show tooltip or hint on hover
+                                   }}
+                                 >
+                                   {row[column.key] ? (
+                                     <span className="text-gray-900 dark:text-white">{row[column.key]}</span>
+                                   ) : (
+                                     <span className="text-gray-400 italic text-xs">Click to add</span>
+                                   )}
+                                 </div>
+                               )}
+                             </div>
+                           ) : (column.type === 'duration' || column.isDurationColumn) ? (
+                             <div className="text-sm px-2 py-1">
+                               <span className="text-gray-700 dark:text-gray-300">
+                                 {getRowDuration(row)}d
+                               </span>
+                             </div>
                           ) : column.type === 'status' ? (
                             hoveredCell === `${row.rowNumber}-${column.key}` ? (
                               <ProfessionalDropdown
@@ -2727,43 +3198,32 @@ const GridView = () => {
                               </span>
                             )
                           ) : column.key === 'taskId' ? (
-                            <div className="flex items-center relative">
-                              {(() => {
-                                const indentLevel = getRowIndent(row.rowNumber);
-                                const hasParent = parentChildMap[row.rowNumber];
-                                const displayIndent = hasParent ? Math.max(indentLevel, 1) : indentLevel;
-                                
-                                return displayIndent > 0 && (
-                                  <div className="flex items-center mr-2">
-                                    {Array.from({ length: displayIndent }).map((_, i) => (
-                                      <div key={i} className="w-4" />
-                                    ))}
-                                  </div>
-                                );
-                              })()}
-                              <div className="flex items-center">
+                            <div className="flex items-center">
+                              {/* Indentation for child rows */}
+                              <div style={{ marginLeft: `${getRowIndent(row.rowNumber) * 20}px` }} className="flex items-center">
+                                {/* Collapse/expand button for parent rows */}
                                 {hasChildren(row.rowNumber) ? (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       toggleRowCollapse(row.rowNumber);
                                     }}
-                                    className="w-4 h-4 flex items-center justify-center mr-1 bg-gray-50 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-sm transition-colors border border-gray-200 dark:border-gray-600"
+                                    className="w-4 h-4 flex items-center justify-center mr-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-sm transition-colors"
+                                    title={collapsedRows.has(row.rowNumber) ? 'Expand' : 'Collapse'}
                                   >
-                                    <svg 
-                                      className={`w-3.5 h-3.5 text-gray-700 font-bold transition-transform ${
-                                        collapsedRows.has(row.rowNumber) ? '' : 'rotate-90'
-                                      }`} 
-                                      fill="currentColor" 
-                                      viewBox="0 0 20 20"
-                                      strokeWidth="2"
-                                    >
-                                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                    </svg>
+                                    <ChevronDown 
+                                      className={`w-3 h-3 text-gray-500 transition-transform ${
+                                        collapsedRows.has(row.rowNumber) ? '-rotate-90' : ''
+                                      }`}
+                                    />
                                   </button>
-                                ) : (
-                                  <div className="w-4 mr-1" />
-                                )}
+                                ) : getRowIndent(row.rowNumber) > 0 ? (
+                                  <div className="w-4 h-4 mr-2 flex items-center justify-center">
+                                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full" />
+                                  </div>
+                                ) : null}
+                                
+                                {/* Task ID content */}
                                 <span className="text-sm">{row[column.key] || ''}</span>
                               </div>
                             </div>
@@ -3007,9 +3467,11 @@ const GridView = () => {
                          column.type === 'dropdown' ? 'Dropdown' :
                          column.type === 'date' ? 'Date' :
                          column.type === 'contact' ? 'Contact' :
-                         column.type === 'checkbox' ? 'Checkbox' :
-                         column.type === 'status' ? 'Status' :
-                         column.type.charAt(0).toUpperCase() + column.type.slice(1)}
+                          column.type === 'checkbox' ? 'Checkbox' :
+                          column.type === 'status' ? 'Status' :
+                          column.type === 'predecessors' ? 'Predecessors' :
+                          column.type === 'duration' ? 'Duration' :
+                          column.type.charAt(0).toUpperCase() + column.type.slice(1)}
                       </span>
                     </div>
                   </div>
@@ -3711,10 +4173,19 @@ const GridView = () => {
         isVisible={toast.isVisible}
         message={toast.message}
         type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
-      />
-      </motion.div>
-    </div>
+          onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+        />
+ 
+       {/* Project Settings Panel */}
+       <ProjectSettings
+         isOpen={showProjectSettings}
+         onClose={() => setShowProjectSettings(false)}
+         projectSettings={projectSettings}
+         onSettingsChange={handleProjectSettingsChange}
+         availableColumns={allColumns}
+       />
+        </motion.div>
+      </div>
   );
 };
 
